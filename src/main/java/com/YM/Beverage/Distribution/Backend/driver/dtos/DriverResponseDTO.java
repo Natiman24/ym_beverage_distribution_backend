@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.driver.dtos;
 
+import com.YM.Beverage.Distribution.Backend.user.dtos.profile.AuditUserResponseDTO;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -21,4 +22,6 @@ public class DriverResponseDTO {
     private boolean isDeactivated;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private AuditUserResponseDTO createdBy;
+    private AuditUserResponseDTO updatedBy;
 }

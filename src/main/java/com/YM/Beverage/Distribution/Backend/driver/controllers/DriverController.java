@@ -41,10 +41,12 @@ public class DriverController {
 
     @GetMapping
     public ResponseEntity<ApiResponse> getDrivers(
+            @RequestParam(value = "search-query", required = false) String searchQuery,
             @RequestParam(value = "active", required = false) Boolean active,
+            @RequestParam(value = "is-deactivated", required = false) Boolean isDeactivated,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
-        ApiResponse response = driverService.getDrivers(active, page, pageSize);
+        ApiResponse response = driverService.getDrivers(searchQuery, active, isDeactivated, page, pageSize);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 

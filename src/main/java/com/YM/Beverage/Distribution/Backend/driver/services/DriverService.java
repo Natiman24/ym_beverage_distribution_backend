@@ -67,16 +67,21 @@ public class DriverService {
                 Map.of("driver", driver.toResponseDTO()));
     }
 
-    public ApiResponse getDrivers(Boolean active, Integer page, Integer pageSize) {
+    public ApiResponse getDrivers(String searchQuery, Boolean active, Boolean isDeactivated,
+                                  Integer page, Integer pageSize) {
         Sort sort = Sort.by(Sort.Direction.ASC, "firstName", "lastName");
 
-        List<Driver> all;
-        if (active != null) {
-            all = driverRepository.findAll(sort).stream()
-                    .filter(d -> d.isActive() == active).toList();
-        } else {
-            all = driverRepository.findAll(sort);
-        }
+        String normalizedSearch = searchQuery == null ? "" : searchQuery.trim().toLowerCase(Locale.ROOT);
+        List<Driver> all = driverRepository.findAll(sort).stream()
+                .filter(driver -> active == null || driver.isActive() == active)
+                .filter(driver -> isDeactivated == null || driver.isDeactivated() == isDeactivated)
+                .filter(driver -> normalizedSearch.isEmpty()
+                        || containsIgnoreCase(driver.getFirstName(), normalizedSearch)
+                        || containsIgnoreCase(driver.getLastName(), normalizedSearch)
+                        || containsIgnoreCase(driver.getEmail(), normalizedSearch)
+                        || containsIgnoreCase(driver.getPhoneNumber(), normalizedSearch)
+                        || containsIgnoreCase(driver.getLicenseNumber(), normalizedSearch))
+                .toList();
 
         if (page == null || pageSize == null) {
             return new ApiResponse("", HttpStatus.OK,
@@ -95,6 +100,10 @@ public class DriverService {
                 "currentPage", page,
                 "totalPages", totalPages,
                 "totalElements", all.size()));
+    }
+
+    private boolean containsIgnoreCase(String value, String normalizedSearch) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(normalizedSearch);
     }
 
     public ApiResponse getDriverById(UUID id) {
