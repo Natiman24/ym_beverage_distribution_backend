@@ -3,6 +3,7 @@ package com.YM.Beverage.Distribution.Backend.user.models;
 import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UserListResponseDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UserResponseDTO;
+import com.YM.Beverage.Distribution.Backend.user.dtos.profile.AuditUserResponseDTO;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
@@ -81,6 +82,22 @@ public class User extends BaseEntity {
                 .permissions(getPermissions())
                 .storeId(store != null ? store.getId() : null)
                 .storeName(store != null ? store.getName() : null)
+                .createdAt(getCreatedAt())
+                .updatedAt(getUpdatedAt())
+                .createdBy(toAuditUserResponseDTO(getCreatedBy()))
+                .updatedBy(toAuditUserResponseDTO(getUpdatedBy()))
+                .build();
+    }
+
+    private AuditUserResponseDTO toAuditUserResponseDTO(User auditUser) {
+        if (auditUser == null) {
+            return null;
+        }
+        return AuditUserResponseDTO.builder()
+                .id(auditUser.getId())
+                .firstName(auditUser.getFirstName())
+                .lastName(auditUser.getLastName())
+                .email(auditUser.getEmail())
                 .build();
     }
 

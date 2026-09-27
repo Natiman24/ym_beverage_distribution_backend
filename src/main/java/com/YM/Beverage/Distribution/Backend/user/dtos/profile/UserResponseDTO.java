@@ -7,6 +7,7 @@ import lombok.*;
 
 import java.util.Set;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -25,4 +26,8 @@ public class UserResponseDTO {
     private Set<Permission> permissions;
     private UUID storeId;
     private String storeName;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private AuditUserResponseDTO createdBy;
+    private AuditUserResponseDTO updatedBy;
 }

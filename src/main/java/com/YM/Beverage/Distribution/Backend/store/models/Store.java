@@ -2,6 +2,7 @@ package com.YM.Beverage.Distribution.Backend.store.models;
 
 import com.YM.Beverage.Distribution.Backend.store.dtos.ListStoreResponseDTO;
 import com.YM.Beverage.Distribution.Backend.store.dtos.SingleStoreResponseDTO;
+import com.YM.Beverage.Distribution.Backend.user.dtos.profile.AuditUserResponseDTO;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -56,8 +57,20 @@ public class Store extends BaseEntity {
                 .active(isActive())
                 .createdAt(getCreatedAt())
                 .updatedAt(getUpdatedAt())
-                .createdBy(getCreatedBy() != null ? getCreatedBy().toUserResponseDTO() : null)
-                .updatedBy(getUpdatedBy() != null ? getUpdatedBy().toUserResponseDTO() : null)
+                .createdBy(toAuditUserResponseDTO(getCreatedBy()))
+                .updatedBy(toAuditUserResponseDTO(getUpdatedBy()))
+                .build();
+    }
+
+    private AuditUserResponseDTO toAuditUserResponseDTO(com.YM.Beverage.Distribution.Backend.user.models.User user) {
+        if (user == null) {
+            return null;
+        }
+        return AuditUserResponseDTO.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
                 .build();
     }
 

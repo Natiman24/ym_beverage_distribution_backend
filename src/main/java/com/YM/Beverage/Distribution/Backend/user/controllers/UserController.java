@@ -72,6 +72,14 @@ public class UserController {
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse> editUser(
+            @PathVariable("id") UUID id,
+            @Valid @RequestBody EditProfileDTO editProfileDTO) {
+        ApiResponse response = userService.editUser(id, editProfileDTO);
+        return new ResponseEntity<>(response, response.getStatusCode());
+    }
+
     @PatchMapping("/{id}/store")
     public ResponseEntity<ApiResponse> updateUserStore(
             @PathVariable("id") UUID id,

@@ -158,6 +158,28 @@ public class UserService {
     }
 
     @Transactional
+    public ApiResponse editUser(UUID userId, EditProfileDTO editProfileDTO) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new DataNotFoundException("User not found")
+        );
+
+        if (editProfileDTO.getFirstName() != null && !editProfileDTO.getFirstName().isBlank()) {
+            user.setFirstName(editProfileDTO.getFirstName().trim());
+        }
+        if (editProfileDTO.getLastName() != null) {
+            user.setLastName(editProfileDTO.getLastName().trim());
+        }
+        if (editProfileDTO.getPhoneNumber() != null) {
+            verifyPhoneNumber(editProfileDTO.getPhoneNumber().trim());
+            user.setPhoneNumber(editProfileDTO.getPhoneNumber().trim());
+        }
+
+        userRepository.save(user);
+        return new ApiResponse("User updated successfully", HttpStatus.OK,
+                Map.of("user", user.toUserResponseDTO()));
+    }
+
+    @Transactional
     public ApiResponse updateUserStore(UUID userId, UpdateUserStoreDTO dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new DataNotFoundException("User not found"));
