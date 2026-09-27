@@ -68,8 +68,8 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    public ApiResponse getStores(String searchQuery, Integer page, Integer pageSize) {
-        Specification<Store> specification = new StoreSpecification(searchQuery);
+    public ApiResponse getStores(String searchQuery, Boolean isActive, Integer page, Integer pageSize) {
+        Specification<Store> specification = new StoreSpecification(searchQuery, isActive);
         Sort sort = Sort.by(Sort.Direction.ASC, "name");
 
         if (page == null || pageSize == null) {

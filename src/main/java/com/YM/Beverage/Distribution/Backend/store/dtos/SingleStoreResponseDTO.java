@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.store.dtos;
 
+import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UserResponseDTO;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -23,4 +24,6 @@ public class SingleStoreResponseDTO {
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private UserResponseDTO createdBy;
+    private UserResponseDTO updatedBy;
 }

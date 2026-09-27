@@ -29,9 +29,10 @@ public class StoreController {
     @GetMapping
     public ResponseEntity<ApiResponse> getStores(
             @RequestParam(value = "search-query", required = false) String searchQuery,
+            @RequestParam(value = "is-active", required = false) Boolean isActive,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
-        ApiResponse apiResponse = storeService.getStores(searchQuery, page, pageSize);
+        ApiResponse apiResponse = storeService.getStores(searchQuery, isActive, page, pageSize);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }
 

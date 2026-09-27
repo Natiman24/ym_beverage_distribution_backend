@@ -56,6 +56,8 @@ public class Store extends BaseEntity {
                 .active(isActive())
                 .createdAt(getCreatedAt())
                 .updatedAt(getUpdatedAt())
+                .createdBy(getCreatedBy() != null ? getCreatedBy().toUserResponseDTO() : null)
+                .updatedBy(getUpdatedBy() != null ? getUpdatedBy().toUserResponseDTO() : null)
                 .build();
     }
 
