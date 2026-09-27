@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+</head>
+<body style="margin: 20px 5px">
+<div
+        style="
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 13px;
+          color: #222;
+        "
+>
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: large; margin-bottom: 1rem;"> <span style=" color:#000; font-weight: 700;">Lemat Systems</span>  <span style="color:#494949;"> </span> </div>
+
+<!--    <div style="margin: 10px 0px; color: #222; ; font-size:0.9rem">Greetings <span style="font-weight: bold; font-size:0.9rem" th:utext="${name}"></span>,</div>-->
+
+    <div style="color: #222; font-size:0.9rem">
+        Welcome,
+        As requested, we have created an account for you with the following email, <span style="font-weight: bold" th:utext= "${email}"></span>.
+    </div>
+
+    <div style="margin: 10px 0px; font-size:0.9rem">
+        Below is your one time password:
+
+        <section style="margin: 5px 20px">
+            Otp:
+            <span style="font-weight: bold" th:utext="${otp}"></span>
+        </section>
+        <section style="margin: 5px 20px">
+            Temporary Password:
+            <span style="font-weight: bold" th:utext="${password}"></span>
+        </section>
+    </div>
+    <div
+            style="color: #222; font-size:0.9rem">
+        Please use the provided information to verify your account. This code expires in 15 minutes. For
+        security purposes, we strongly recommend not to share this email with anyone.
+        <div style="margin: 3px 0px;color: #222; margin: 20px 0px">
+            Thank you for being part of
+            <span style="font-weight: bold">Lemat Systems</span>.
+        </div>
+        <div style="margin: 10px 0px">Best regards,</div>
+    </div>
+</div>
+<div style="display: flex; align-items: center; margin-top: 40px">
+<!--    <section-->
+<!--            class="filon-img-container"-->
+<!--            style="width: 10rem; height: 141px; margin-right: 40px"-->
+<!--    >-->
+<!--        <img-->
+<!--                class="filon-img"-->
+<!--                style="width: 100%; height: 100%"-->
+<!--                src="https://firebasestorage.googleapis.com/v0/b/filon-55eb9.appspot.com/o/item_images%2Ffilon.ico?alt=media&token=56e2a209-6dc4-4db4-9320-79fced5c699a"-->
+<!--                alt="FILON"-->
+<!--        />-->
+<!--    </section>-->
+    <span style="height: 141px; width: 1px; background-color: black"></span>
+    <section class="content-container" style="padding-left: 10px">
+        <div
+                class="content-title"
+                style="
+              font-size: 19px;
+              color: rgb(0, 0, 0);
+              font-family: Verdana, Geneva, Tahoma, sans-serif;
+              font-weight: 700;
+              margin-bottom: 6px;
+            "
+        >
+            Lemat Systems
+        </div>
+<!--        <div-->
+<!--                class="icog-location"-->
+<!--                style="-->
+<!--              font-size: 14px;-->
+<!--              color: #494949;-->
+<!--              font-weight: 400;-->
+<!--              font-family: Verdana, Geneva, Tahoma, sans-serif;-->
+<!--              margin: 3px 0px;-->
+<!--            "-->
+<!--        >-->
+<!--            4 Kilo, Ambassador Mall 1st Floor-->
+<!--        </div>-->
+<!--        <div-->
+<!--                class="icog-location"-->
+<!--                style="-->
+<!--              font-size: 14px;-->
+<!--              color: #494949;-->
+<!--              font-weight: 400;-->
+<!--              font-family: Verdana, Geneva, Tahoma, sans-serif;-->
+<!--              margin: 3px 0px;-->
+<!--            "-->
+<!--        >-->
+<!--            Addis Ababa, Ethiopia-->
+<!--        </div>-->
+    </section>
+</div>
+</body>
+</html>

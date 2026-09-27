@@ -1,0 +1,88 @@
+name: YM Beverage Distribution CI/CD Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  workflow_dispatch:
+
+jobs:
+  build_and_push_docker_image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # ── Production ───────────────────────────────────────────────
+      - name: Build and Push Docker Image (Production)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker build --build-arg ENV_FILE=.env.prod \
+            -t ${{ secrets.DOCKER_USERNAME }}/ym_beverage_distribution:prod-${{ github.sha }} .
+
+          docker push ${{ secrets.DOCKER_USERNAME }}/ym_beverage_distribution:prod-${{ github.sha }}
+
+      # ── Staging ──────────────────────────────────────────────────
+      - name: Build and Push Docker Image (Staging)
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          docker build --build-arg ENV_FILE=.env.staging \
+            -t ${{ secrets.DOCKER_USERNAME }}/ym_beverage_distribution:staging-${{ github.sha }} .
+
+          docker push ${{ secrets.DOCKER_USERNAME }}/ym_beverage_distribution:staging-${{ github.sha }}
+
+  deploy_to_server:
+    runs-on: ubuntu-latest
+    needs: build_and_push_docker_image
+    env:
+      DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+      IMAGE_TAG: ${{ github.sha }}
+
+    steps:
+      - name: Start SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      # ── Production deploy ────────────────────────────────────────
+      - name: Deploy to Production
+        if: github.ref == 'refs/heads/main'
+        env:
+          CONTAINER_NAME: ym_beverage_distribution
+          IMAGE: ${{ secrets.DOCKER_USERNAME }}/ym_beverage_distribution:prod-${{ github.sha }}
+          PORT: 8004:8080
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+            docker pull "$IMAGE"
+            docker stop "$CONTAINER_NAME" || true
+            docker rm   "$CONTAINER_NAME" || true
+            docker run -d --restart=unless-stopped \
+              --name "$CONTAINER_NAME" \
+              -p "$PORT" \
+              "$IMAGE"
+          EOF
+
+      # ── Staging deploy ───────────────────────────────────────────
+      - name: Deploy to Staging
+        if: github.ref == 'refs/heads/staging'
+        env:
+          CONTAINER_NAME: ym_beverage_distribution-staging
+          IMAGE: ${{ secrets.DOCKER_USERNAME }}/ym_beverage_distribution:staging-${{ github.sha }}
+          PORT: 8005:8080
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << EOF
+            docker pull "$IMAGE"
+            docker stop "$CONTAINER_NAME" || true
+            docker rm   "$CONTAINER_NAME" || true
+            docker run -d --restart=unless-stopped \
+              --name "$CONTAINER_NAME" \
+              -p "$PORT" \
+              "$IMAGE"
+          EOF

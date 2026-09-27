@@ -1,0 +1,47 @@
+-- ============================================================
+-- V2: Migrate old permission values to new enum constants
+-- ============================================================
+
+-- ── role_permissions ─────────────────────────────────────────
+
+-- Renames
+UPDATE role_permissions SET permission = 'STORE_CREATE'   WHERE permission = 'CUSTOMER_CREATE';
+UPDATE role_permissions SET permission = 'STORE_VIEW'     WHERE permission = 'CUSTOMER_VIEW';
+UPDATE role_permissions SET permission = 'STORE_UPDATE'   WHERE permission = 'CUSTOMER_UPDATE';
+UPDATE role_permissions SET permission = 'STORE_DELETE'   WHERE permission = 'CUSTOMER_DELETE';
+
+UPDATE role_permissions SET permission = 'TRANSACTION_CREATE' WHERE permission = 'PAYMENT_CREATE';
+UPDATE role_permissions SET permission = 'TRANSACTION_VIEW'   WHERE permission = 'PAYMENT_VIEW';
+UPDATE role_permissions SET permission = 'TRANSACTION_CREATE' WHERE permission = 'PAYMENT_UPDATE';
+
+UPDATE role_permissions SET permission = 'ORDER_CONFIRM'  WHERE permission = 'ORDER_SUBMIT';
+
+-- ORDER_CONFIRM_DELIVERY stays valid — it is still in the enum
+
+-- Remove any duplicates that the updates above may have caused
+DELETE FROM role_permissions rp
+WHERE ctid NOT IN (
+    SELECT MIN(ctid)
+    FROM role_permissions
+    GROUP BY role_id, permission
+);
+
+-- ── user_permissions ─────────────────────────────────────────
+
+UPDATE user_permissions SET permission = 'STORE_CREATE'   WHERE permission = 'CUSTOMER_CREATE';
+UPDATE user_permissions SET permission = 'STORE_VIEW'     WHERE permission = 'CUSTOMER_VIEW';
+UPDATE user_permissions SET permission = 'STORE_UPDATE'   WHERE permission = 'CUSTOMER_UPDATE';
+UPDATE user_permissions SET permission = 'STORE_DELETE'   WHERE permission = 'CUSTOMER_DELETE';
+
+UPDATE user_permissions SET permission = 'TRANSACTION_CREATE' WHERE permission = 'PAYMENT_CREATE';
+UPDATE user_permissions SET permission = 'TRANSACTION_VIEW'   WHERE permission = 'PAYMENT_VIEW';
+UPDATE user_permissions SET permission = 'TRANSACTION_CREATE' WHERE permission = 'PAYMENT_UPDATE';
+
+UPDATE user_permissions SET permission = 'ORDER_CONFIRM'  WHERE permission = 'ORDER_SUBMIT';
+
+DELETE FROM user_permissions up
+WHERE ctid NOT IN (
+    SELECT MIN(ctid)
+    FROM user_permissions
+    GROUP BY user_id, permission
+);
