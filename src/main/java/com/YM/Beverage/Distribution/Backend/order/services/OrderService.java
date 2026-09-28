@@ -576,6 +576,7 @@ public class OrderService {
                     .product(product)
                     .quantity(itemDTO.getQuantity())
                     .unitPrice(unitPrice)
+                    .unitCost(product.getPurchasePrice())
                     .totalPrice(totalPrice)
                     .build());
         }

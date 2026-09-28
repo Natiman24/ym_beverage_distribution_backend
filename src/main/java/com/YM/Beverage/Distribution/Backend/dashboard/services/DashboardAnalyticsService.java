@@ -38,6 +38,10 @@ public class DashboardAnalyticsService {
         long delivered = orderRepository.countDeliveredOrders(from, to);
         BigDecimal revenue = orderRepository.sumDeliveredRevenue(from, to);
         BigDecimal previousRevenue = orderRepository.sumDeliveredRevenue(previousFrom, from);
+        BigDecimal deliveredCost = Optional.ofNullable(orderItemRepository.sumDeliveredCost(from, to)).orElse(BigDecimal.ZERO);
+        BigDecimal previousDeliveredCost = Optional.ofNullable(orderItemRepository.sumDeliveredCost(previousFrom, from)).orElse(BigDecimal.ZERO);
+        BigDecimal grossProfit = revenue.subtract(deliveredCost);
+        BigDecimal previousGrossProfit = previousRevenue.subtract(previousDeliveredCost);
         double averageDeliveryHours = number(orderRepository.averageDeliveryHours(from, to)).doubleValue();
 
         Map<LocalDate, DashboardAnalyticsDTO.TrendPoint> points = new LinkedHashMap<>();
@@ -59,6 +63,9 @@ public class DashboardAnalyticsService {
                         .orders(orders).ordersChangePercent(change(orders, previousOrders))
                         .deliveredOrders(delivered).deliveryRatePercent(percent(delivered, orders))
                         .deliveredRevenue(revenue).revenueChangePercent(change(revenue, previousRevenue))
+                        .deliveredCost(deliveredCost).grossProfit(grossProfit)
+                        .grossProfitChangePercent(change(grossProfit, previousGrossProfit))
+                        .grossProfitMarginPercent(percent(grossProfit, revenue))
                         .averageOrderValue(delivered == 0 ? BigDecimal.ZERO : revenue.divide(BigDecimal.valueOf(delivered), 2, RoundingMode.HALF_UP))
                         .averageDeliveryHours(Math.round(averageDeliveryHours * 10.0) / 10.0)
                         .activeStores(storeRepository.countByActiveTrue()).availableDrivers(driverRepository.countAvailableDrivers()).build())
@@ -92,6 +99,7 @@ public class DashboardAnalyticsService {
     private Number number(Object value) { return value instanceof Number number ? number : 0; }
     private BigDecimal decimal(Object value) { return value instanceof BigDecimal decimal ? decimal : new BigDecimal(value.toString()); }
     private double percent(long part, long total) { return total == 0 ? 0 : Math.round(part * 1000.0 / total) / 10.0; }
+    private double percent(BigDecimal part, BigDecimal total) { return total.signum() == 0 ? 0 : part.multiply(BigDecimal.valueOf(100)).divide(total, 1, RoundingMode.HALF_UP).doubleValue(); }
     private double change(long current, long previous) { return previous == 0 ? (current == 0 ? 0 : 100) : Math.round((current - previous) * 1000.0 / previous) / 10.0; }
     private double change(BigDecimal current, BigDecimal previous) { return previous.signum() == 0 ? (current.signum() == 0 ? 0 : 100) : current.subtract(previous).multiply(BigDecimal.valueOf(100)).divide(previous, 1, RoundingMode.HALF_UP).doubleValue(); }
 }

@@ -34,6 +34,14 @@ public class OrderItem extends BaseEntity {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal unitPrice;
 
+    /**
+     * Purchase cost captured when the order item is created. Keeping this on
+     * the item makes historical profit independent of later product price
+     * changes.
+     */
+    @Column(precision = 19, scale = 2)
+    private BigDecimal unitCost;
+
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal totalPrice;
 

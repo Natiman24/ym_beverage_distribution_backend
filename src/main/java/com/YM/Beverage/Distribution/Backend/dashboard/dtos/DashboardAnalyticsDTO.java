@@ -29,6 +29,10 @@ public class DashboardAnalyticsDTO {
         private double deliveryRatePercent;
         private BigDecimal deliveredRevenue;
         private double revenueChangePercent;
+        private BigDecimal deliveredCost;
+        private BigDecimal grossProfit;
+        private double grossProfitChangePercent;
+        private double grossProfitMarginPercent;
         private BigDecimal averageOrderValue;
         private double averageDeliveryHours;
         private long activeStores;
