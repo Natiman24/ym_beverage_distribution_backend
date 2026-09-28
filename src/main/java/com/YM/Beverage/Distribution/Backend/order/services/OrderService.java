@@ -393,6 +393,7 @@ public class OrderService {
             throw new DataNotFoundException("Driver not found");
         }
         List<Order> orders = orderRepository.findByDriverIdOrderByOrderDateDesc(driverId);
+
         return new ApiResponse("", HttpStatus.OK,
                 Map.of("orders", orders.stream().map(Order::toListResponseDTO).toList()));
     }

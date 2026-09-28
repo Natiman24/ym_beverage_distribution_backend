@@ -111,6 +111,7 @@ public class Order extends BaseEntity {
                 .paymentDueDate(paymentDueDate)
                 .orderDate(orderDate)
                 .expectedDeliveryDate(expectedDeliveryDate)
+                .deliveredAt(deliveredAt)
                 .totalAmount(totalAmount)
                 .driverName(driver != null ? driver.getFirstName() + " " + driver.getLastName() : null)
                 .itemCount(items != null ? items.size() : 0)

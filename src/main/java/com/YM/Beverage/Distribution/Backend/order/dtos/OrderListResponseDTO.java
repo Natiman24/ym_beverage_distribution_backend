@@ -25,6 +25,7 @@ public class OrderListResponseDTO {
     private LocalDate paymentDueDate;
     private LocalDateTime orderDate;
     private LocalDateTime expectedDeliveryDate;
+    private LocalDateTime deliveredAt;
     private BigDecimal totalAmount;
     private String driverName;
     private int itemCount;
