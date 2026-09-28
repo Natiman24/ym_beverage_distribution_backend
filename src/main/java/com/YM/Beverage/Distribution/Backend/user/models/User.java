@@ -16,6 +16,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -78,7 +79,7 @@ public class User extends BaseEntity {
                 .email(getEmail())
                 .isActive(isActive)
                 .isDeactivated(isDeactivated)
-                .roles(getRoles().stream().map(Role::toResponseDTO).collect(java.util.stream.Collectors.toSet()))
+                .roles(roles != null ? getRoles().stream().map(Role::toResponseDTO).collect(Collectors.toSet()) : null)
                 .permissions(getPermissions())
                 .storeId(store != null ? store.getId() : null)
                 .storeName(store != null ? store.getName() : null)
