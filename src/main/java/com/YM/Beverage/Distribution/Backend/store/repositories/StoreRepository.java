@@ -8,6 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface StoreRepository extends JpaRepository<Store, UUID>, JpaSpecificationExecutor<Store> {
+    long countByActiveTrue();
     Optional<Store> findByNameIgnoreCase(String name);
     Optional<Store> findByPhoneNumber(String phoneNumber);
     Optional<Store> findByIdAndActiveTrue(UUID id);

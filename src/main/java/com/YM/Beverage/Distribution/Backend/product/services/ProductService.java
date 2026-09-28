@@ -138,13 +138,13 @@ public class ProductService {
     }
 
     public ApiResponse getProductById(UUID id) {
-        Product product = findActiveProduct(id);
+        Product product = findVisibleProduct(id);
         return new ApiResponse("", HttpStatus.OK, Map.of("product", product.toSingleResponseDTO()));
     }
 
     @Transactional
     public ApiResponse updateProduct(UUID id, UpdateProductDTO dto) {
-        Product product = findActiveProduct(id);
+        Product product = findVisibleProduct(id);
 
         if (dto.getName() != null && !dto.getName().isBlank()) product.setName(dto.getName());
         if (dto.getDescription() != null) product.setDescription(dto.getDescription());
@@ -153,6 +153,7 @@ public class ProductService {
         if (dto.getThresholdQuantity() != null) product.setThresholdQuantity(dto.getThresholdQuantity());
         if (dto.getSellingPrice() != null) product.setSellingPrice(dto.getSellingPrice());
         if (dto.getPurchasePrice() != null) product.setPurchasePrice(dto.getPurchasePrice());
+        if (dto.getActive() != null && isSuperAdmin()) product.setActive(dto.getActive());
         if (dto.getBrandId() != null) {
             product.setBrand(brandRepository.findById(dto.getBrandId())
                     .orElseThrow(() -> new DataNotFoundException("Brand not found")));
@@ -226,7 +227,7 @@ public class ProductService {
     }
 
     public ApiResponse getProductHistory(UUID id, Integer page, Integer pageSize) {
-        if (!productRepository.existsByIdAndActiveTrue(id)) {
+        if (isSuperAdmin() ? !productRepository.existsById(id) : !productRepository.existsByIdAndActiveTrue(id)) {
             throw new DataNotFoundException("Product not found");
         }
 
@@ -250,6 +251,14 @@ public class ProductService {
     private Product findActiveProduct(UUID id) {
         return productRepository.findByIdAndActiveTrue(id)
                 .orElseThrow(() -> new DataNotFoundException("Active product not found"));
+    }
+
+    private Product findVisibleProduct(UUID id) {
+        if (isSuperAdmin()) {
+            return productRepository.findById(id)
+                    .orElseThrow(() -> new DataNotFoundException("Product not found"));
+        }
+        return findActiveProduct(id);
     }
 
     private boolean isSuperAdmin() {

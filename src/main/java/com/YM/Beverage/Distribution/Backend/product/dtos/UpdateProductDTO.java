@@ -38,4 +38,6 @@ public class UpdateProductDTO {
     @Positive(message = "Purchase price must be positive")
     private BigDecimal purchasePrice;
 
+    private Boolean active;
+
 }

@@ -5,8 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.jpa.repository.Query;
 
 public interface DriverRepository extends JpaRepository<Driver, UUID> {
+    @Query("SELECT COUNT(d) FROM Driver d WHERE d.isActive = true AND d.isDeactivated = false")
+    long countAvailableDrivers();
     Optional<Driver> findByPhoneNumber(String phoneNumber);
     Optional<Driver> findByLicenseNumber(String licenseNumber);
     Optional<Driver> findByEmail(String email);

@@ -19,6 +19,19 @@ public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpec
     boolean existsByIdAndActiveTrue(UUID id);
 
     long countByActiveTrue();
+    long countByActiveTrueAndQuantity(int quantity);
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true AND p.quantity > p.thresholdQuantity")
+    long countHealthyProducts();
+
+    @Query("SELECT COUNT(p) FROM Product p WHERE p.active = true AND p.quantity > 0 AND p.quantity <= p.thresholdQuantity")
+    long countLowStockProducts();
+
+    @Query("SELECT COALESCE(SUM(p.quantity), 0) FROM Product p WHERE p.active = true")
+    Long sumActiveProductUnits();
+
+    @Query("SELECT COALESCE(SUM(p.quantity * p.sellingPrice), 0) FROM Product p WHERE p.active = true")
+    java.math.BigDecimal sumRetailStockValue();
 
     @Query("SELECT p FROM Product p WHERE p.quantity <= p.thresholdQuantity AND p.active = true ORDER BY p.quantity ASC")
     List<Product> findLowStockProducts();
