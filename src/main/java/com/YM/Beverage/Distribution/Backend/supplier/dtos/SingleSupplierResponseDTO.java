@@ -15,6 +15,7 @@ public class SingleSupplierResponseDTO {
     private String name;
     private String description;
     private String phoneNumber;
+    private Boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

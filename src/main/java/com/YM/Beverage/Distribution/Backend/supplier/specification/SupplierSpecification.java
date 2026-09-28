@@ -11,6 +11,7 @@ import org.springframework.data.jpa.domain.Specification;
 @RequiredArgsConstructor
 public class SupplierSpecification implements Specification<Supplier> {
     private final String searchQuery;
+    private final Boolean active;
 
     @Override
     public Predicate toPredicate(Root<Supplier> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
@@ -19,8 +20,12 @@ public class SupplierSpecification implements Specification<Supplier> {
         if( searchQuery != null && !searchQuery.isEmpty()) {
             String likePattern = "%" + searchQuery.toLowerCase() + "%";
             Predicate namePredicate = cb.like(cb.lower(root.get("name")), likePattern);
-            predicate = cb.and(predicate, namePredicate);
+            Predicate phonePredicate = cb.like(cb.lower(root.get("phoneNumber")), likePattern);
+            Predicate descriptionPredicate = cb.like(cb.lower(root.get("description")), likePattern);
+            predicate = cb.and(predicate, cb.or(namePredicate, phonePredicate, descriptionPredicate));
         }
+
+        if (active != null) predicate = cb.and(predicate, cb.equal(root.get("active"), active));
 
         return predicate;
     }

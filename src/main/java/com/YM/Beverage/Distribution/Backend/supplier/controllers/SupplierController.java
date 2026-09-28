@@ -33,9 +33,10 @@ public class SupplierController {
     @GetMapping
     public ResponseEntity<ApiResponse> getSuppliers(
             @RequestParam(value = "search-query", required = false) String searchQuery,
+            @RequestParam(value = "active", required = false) Boolean active,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
-        ApiResponse apiResponse = supplierService.getSuppliers(page, pageSize, searchQuery);
+        ApiResponse apiResponse = supplierService.getSuppliers(page, pageSize, searchQuery, active);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }
 

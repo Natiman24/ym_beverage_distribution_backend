@@ -17,4 +17,5 @@ public class UpdateSupplierDTO{
     private String description;
     @JsonMerge
     private String phoneNumber;
+    private Boolean active;
 }

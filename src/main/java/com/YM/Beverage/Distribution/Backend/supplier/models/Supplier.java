@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 @Getter
 @Setter
@@ -26,6 +27,9 @@ public class Supplier extends BaseEntity {
     private String description;
     @Column(name = "phone_number")
     private String phoneNumber;
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = true;
 
     public SingleSupplierResponseDTO toSingleResponseDTO(){
         return SingleSupplierResponseDTO.builder().
@@ -33,6 +37,7 @@ public class Supplier extends BaseEntity {
                 name(getName()).
                 description(getDescription()).
                 phoneNumber(getPhoneNumber()).
+                active(getActive()).
                 createdAt(getCreatedAt()).
                 updatedAt(getUpdatedAt()).
                 build();
@@ -44,6 +49,7 @@ public class Supplier extends BaseEntity {
                 name(getName()).
                 description(getDescription()).
                 phoneNumber(getPhoneNumber()).
+                active(getActive()).
                 build();
     }
 }

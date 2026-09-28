@@ -64,8 +64,8 @@ public class SupplierServiceImpl implements SupplierService {
         }
 
     @Override
-    public ApiResponse getSuppliers(Integer page, Integer pageSize, String searchQuery) {
-        Specification<Supplier> specification = new SupplierSpecification(searchQuery);
+    public ApiResponse getSuppliers(Integer page, Integer pageSize, String searchQuery, Boolean active) {
+        Specification<Supplier> specification = new SupplierSpecification(searchQuery, active);
         Sort sort = Sort.by(Sort.Direction.ASC, "name");
 
         if (page == null || pageSize == null) {
@@ -128,6 +128,7 @@ public class SupplierServiceImpl implements SupplierService {
         }
 
         supplier.setDescription(updateSupplierDTO.getDescription() != null ? updateSupplierDTO.getDescription() : supplier.getDescription());
+        if (updateSupplierDTO.getActive() != null) supplier.setActive(updateSupplierDTO.getActive());
 
         supplierRepository.save(supplier);
 
