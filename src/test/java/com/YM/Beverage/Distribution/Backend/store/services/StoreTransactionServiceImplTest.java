@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.store.services;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus;
 import com.YM.Beverage.Distribution.Backend.order.enums.PaymentMethod;
 import com.YM.Beverage.Distribution.Backend.order.enums.PaymentStatus;
@@ -31,6 +32,7 @@ class StoreTransactionServiceImplTest {
     @Mock private StoreTransactionRepository transactionRepository;
     @Mock private StoreRepository storeRepository;
     @Mock private OrderRepository orderRepository;
+    @Mock private DataScopeService dataScopeService;
 
     @Test
     void repaymentMarksOrderAsPartiallyPaid() {
@@ -54,7 +56,7 @@ class StoreTransactionServiceImplTest {
         when(transactionRepository.sumAmountByOrderIdAndTypes(eq(order.getId()), anyList()))
                 .thenReturn(BigDecimal.ZERO, BigDecimal.valueOf(40));
 
-        new StoreTransactionServiceImpl(transactionRepository, storeRepository, orderRepository)
+        new StoreTransactionServiceImpl(dataScopeService, transactionRepository, storeRepository, orderRepository)
                 .createTransaction(store.getId(), dto);
 
         assertEquals(PaymentStatus.PARTIALLY_PAID, order.getPaymentStatus());

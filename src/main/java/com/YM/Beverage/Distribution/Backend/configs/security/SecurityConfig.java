@@ -69,7 +69,12 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/auth/**"
+                                "/api/auth/activate",
+                                "/api/auth/login",
+                                "/api/auth/refresh",
+                                "/api/auth/request-otp",
+                                "/api/auth/verify-otp",
+                                "/api/auth/reset-password"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )

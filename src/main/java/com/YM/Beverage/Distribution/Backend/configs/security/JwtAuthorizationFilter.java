@@ -20,10 +20,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthorizationFilter extends OncePerRequestFilter {
+
+    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of(
+            "/api/auth/activate",
+            "/api/auth/login",
+            "/api/auth/refresh",
+            "/api/auth/request-otp",
+            "/api/auth/verify-otp",
+            "/api/auth/reset-password"
+    );
 
     private final JwtUtil jwtUtil;
     private final ObjectMapper mapper;
@@ -35,7 +45,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         if (HttpMethod.OPTIONS.matches(request.getMethod())) {
             return true;
         }
-        return path.startsWith("/api/auth/") && !path.equals("/api/auth/logout");
+        return PUBLIC_AUTH_PATHS.contains(path);
     }
 
     @Override

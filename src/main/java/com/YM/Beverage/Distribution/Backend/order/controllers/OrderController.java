@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,12 +32,14 @@ public class OrderController {
     private final JwtUtil jwtUtil;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ORDER_CREATE')")
     public ResponseEntity<ApiResponse> createOrder(@Valid @RequestBody CreateOrderDTO dto) {
         ApiResponse response = orderService.createOrder(dto, jwtUtil.getUserId(jwtUtil.resolveToken(request)));
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ORDER_VIEW')")
     public ResponseEntity<ApiResponse> getOrders(
             @RequestParam(value = "store-id", required = false) UUID storeId,
             @RequestParam(value = "statuses", required = false) List<OrderStatus> statuses,
@@ -64,12 +67,14 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ORDER_VIEW')")
     public ResponseEntity<ApiResponse> getOrderById(@PathVariable UUID id) {
         ApiResponse response = orderService.getOrderById(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
     public ResponseEntity<ApiResponse> updateOrder(@PathVariable UUID id,
                                                    @Valid @RequestBody UpdateOrderDTO dto) {
         ApiResponse response = orderService.updateOrder(id, dto);
@@ -77,36 +82,42 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/confirm")
+    @PreAuthorize("hasAuthority('ORDER_CONFIRM')")
     public ResponseEntity<ApiResponse> confirmOrder(@PathVariable UUID id) {
         ApiResponse response = orderService.confirmOrder(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}/approve")
+    @PreAuthorize("hasAuthority('ORDER_APPROVE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> approveOrder(@PathVariable UUID id) {
         ApiResponse response = orderService.approveOrder(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}/assign-driver/{driverId}")
+    @PreAuthorize("hasAuthority('ORDER_ASSIGN_DRIVER') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> assignDriver(@PathVariable UUID id, @PathVariable UUID driverId) {
         ApiResponse response = orderService.assignDriver(id, driverId);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}/dispatch")
+    @PreAuthorize("hasAuthority('ORDER_DISPATCH') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> dispatchOrder(@PathVariable UUID id) {
         ApiResponse response = orderService.dispatchOrder(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}/deliver")
+    @PreAuthorize("hasAuthority('ORDER_DELIVER') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> deliverOrder(@PathVariable UUID id) {
         ApiResponse response = orderService.deliverOrder(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}/return")
+    @PreAuthorize("hasAuthority('ORDER_RETURN') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> returnOrder(@PathVariable UUID id,
                                                    @Valid @RequestBody ReturnOrderDTO dto) {
         ApiResponse response = orderService.returnOrder(id, dto.getReason());
@@ -114,6 +125,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('ORDER_CANCEL')")
     public ResponseEntity<ApiResponse> cancelOrder(@PathVariable UUID id,
                                                    @Valid @RequestBody CancelOrderDTO dto) {
         ApiResponse response = orderService.cancelOrder(id, dto.getReason());
@@ -121,12 +133,14 @@ public class OrderController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ORDER_DELETE')")
     public ResponseEntity<ApiResponse> deleteOrder(@PathVariable UUID id) {
         ApiResponse response = orderService.deleteOrder(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @GetMapping("/{id}/status-history")
+    @PreAuthorize("hasAuthority('ORDER_VIEW')")
     public ResponseEntity<ApiResponse> getStatusHistory(@PathVariable UUID id) {
         ApiResponse response = orderService.getStatusHistory(id);
         return new ResponseEntity<>(response, response.getStatusCode());

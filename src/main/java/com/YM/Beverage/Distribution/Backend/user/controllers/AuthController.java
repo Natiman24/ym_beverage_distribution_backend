@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class AuthController {
     private final HttpServletRequest httpServletRequest;
 
     @PostMapping("/register")
+    @PreAuthorize("hasAuthority('USER_CREATE')")
     public ResponseEntity<ApiResponse> register(@Valid @RequestBody CreateUserDTO createUserDTO) {
         ApiResponse response = authService.register(createUserDTO);
         return new ResponseEntity<>(response,response.getStatusCode());
@@ -72,6 +74,7 @@ public class AuthController {
 
     @SecurityRequirement(name = "bearerAuth")
     @PostMapping("/logout")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse> logout() {
         UUID userId = jwtUtil.getUserId(jwtUtil.resolveToken(httpServletRequest));
         if(userId == null){

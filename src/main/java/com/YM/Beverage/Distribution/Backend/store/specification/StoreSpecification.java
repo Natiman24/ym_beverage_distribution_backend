@@ -8,14 +8,25 @@ import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.util.UUID;
+
 @RequiredArgsConstructor
 public class StoreSpecification implements Specification<Store> {
     private final String searchQuery;
     private final Boolean isActive;
+    private final UUID storeId;
+
+    public StoreSpecification(String searchQuery, Boolean isActive) {
+        this(searchQuery, isActive, null);
+    }
 
     @Override
     public Predicate toPredicate(Root<Store> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
         Predicate predicate = cb.conjunction();
+
+        if (storeId != null) {
+            predicate = cb.and(predicate, cb.equal(root.get("id"), storeId));
+        }
 
         if (searchQuery != null && !searchQuery.isEmpty()) {
             String likePattern = "%" + searchQuery.toLowerCase() + "%";

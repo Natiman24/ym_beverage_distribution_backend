@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.user.services;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.configs.security.JwtUtil;
 import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
@@ -46,6 +47,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final RoleRepository roleRepository;
     private final StoreRepository storeRepository;
+    private final DataScopeService dataScopeService;
 
     @Value("${refresh_token_validity}")
     private long refreshTokenValidity;
@@ -71,9 +73,11 @@ public class AuthService {
         }
 
         String password = generatePassword();
+        UUID requesterStoreId = dataScopeService.currentStoreId();
+        UUID effectiveStoreId = requesterStoreId != null ? requesterStoreId : createUserDTO.getStoreId();
         Store store = null;
-        if (createUserDTO.getStoreId() != null) {
-            store = storeRepository.findByIdAndActiveTrue(createUserDTO.getStoreId())
+        if (effectiveStoreId != null) {
+            store = storeRepository.findByIdAndActiveTrue(effectiveStoreId)
                     .orElseThrow(() -> new DataNotFoundException("Active store not found"));
         }
 

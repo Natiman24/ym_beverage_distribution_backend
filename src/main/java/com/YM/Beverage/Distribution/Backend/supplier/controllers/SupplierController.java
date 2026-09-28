@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -25,12 +26,14 @@ public class SupplierController {
     private final HttpServletRequest httpServletRequest;
 
     @PostMapping()
+    @PreAuthorize("hasAuthority('SUPPLIER_CREATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> createSupplier(@Valid @RequestBody CreateSupplierDTO createSupplierDTO) {
         ApiResponse apiResponse = supplierService.createSupplier(createSupplierDTO);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('SUPPLIER_VIEW') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> getSuppliers(
             @RequestParam(value = "search-query", required = false) String searchQuery,
             @RequestParam(value = "active", required = false) Boolean active,
@@ -41,18 +44,21 @@ public class SupplierController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('SUPPLIER_VIEW') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> getSupplierById(@PathVariable UUID id) {
         ApiResponse apiResponse = supplierService.getSupplierById(id);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('SUPPLIER_UPDATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> editSupplier(@PathVariable UUID id, @Valid @RequestBody UpdateSupplierDTO updateSupplierDTO) {
         ApiResponse apiResponse = supplierService.editSupplier(id, updateSupplierDTO);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('SUPPLIER_DELETE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> deleteSupplier(@PathVariable UUID id) {
         ApiResponse apiResponse = supplierService.deleteSupplier(id);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());

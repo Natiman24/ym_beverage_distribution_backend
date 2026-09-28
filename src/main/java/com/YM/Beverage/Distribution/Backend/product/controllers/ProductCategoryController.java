@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,12 +23,14 @@ public class ProductCategoryController {
     private final ProductCategoryService productCategoryService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('LOOKUP_CREATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> createCategory(@Valid @RequestBody CreateLookupDTO dto) {
         ApiResponse response = productCategoryService.createCategory(dto);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('LOOKUP_VIEW')")
     public ResponseEntity<ApiResponse> getCategories(
             @RequestParam(value = "search-query", required = false) String searchQuery,
             @RequestParam(value = "active", required = false) Boolean active,
@@ -38,12 +41,14 @@ public class ProductCategoryController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_VIEW')")
     public ResponseEntity<ApiResponse> getCategoryById(@PathVariable UUID id) {
         ApiResponse response = productCategoryService.getCategoryById(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_UPDATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> updateCategory(@PathVariable UUID id,
                                                       @Valid @RequestBody UpdateLookupDTO dto) {
         ApiResponse response = productCategoryService.updateCategory(id, dto);
@@ -51,6 +56,7 @@ public class ProductCategoryController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_DELETE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> deleteCategory(@PathVariable UUID id) {
         ApiResponse response = productCategoryService.deleteCategory(id);
         return new ResponseEntity<>(response, response.getStatusCode());

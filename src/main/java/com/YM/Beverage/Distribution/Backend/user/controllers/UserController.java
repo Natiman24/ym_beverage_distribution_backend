@@ -30,6 +30,7 @@ public class UserController {
 
 
     @GetMapping("/me")
+    @PreAuthorize("hasAuthority('PROFILE_VIEW')")
     public ResponseEntity<ApiResponse> getMyProfile() {
         UUID userId = jwtUtil.getUserId(jwtUtil.resolveToken(httpServletRequest));
         ApiResponse response = userService.getProfile(userId);
@@ -37,6 +38,7 @@ public class UserController {
     }
 
     @PatchMapping("/edit-profile")
+    @PreAuthorize("hasAuthority('PROFILE_UPDATE')")
     public ResponseEntity<ApiResponse> editProfile(@Valid @ModelAttribute EditProfileDTO editProfileDTO){
         UUID userId = jwtUtil.getUserId(jwtUtil.resolveToken(httpServletRequest));
         ApiResponse response = userService.editProfile(userId, editProfileDTO);
@@ -45,6 +47,7 @@ public class UserController {
 
 
     @PostMapping("/change-password")
+    @PreAuthorize("hasAuthority('PROFILE_UPDATE')")
     public ResponseEntity<ApiResponse> changePassword(@Valid @RequestBody ChangePasswordDTO changePasswordDTO) {
         UUID userId = jwtUtil.getUserId(jwtUtil.resolveToken(httpServletRequest));
         ApiResponse response = userService.changePassword(userId,changePasswordDTO);
@@ -52,18 +55,20 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_VIEW')")
     public ResponseEntity<ApiResponse> getUserById(@PathVariable("id") UUID id) {
         ApiResponse response = userService.getUserById(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}/change-activation-status")
+    @PreAuthorize("hasAuthority('USER_TOGGLE_ACTIVE')")
     public ResponseEntity<ApiResponse> changeActivationStatus(@PathVariable UUID id){
         ApiResponse response = userService.changeActivationStatus(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
-    @PreAuthorize("hasAuthority('ROLE_MANAGE')")
+    @PreAuthorize("hasAuthority('ROLE_MANAGE') and @dataScope.isCompanyUser(authentication)")
     @PatchMapping("/{id}/roles-permissions")
     public ResponseEntity<ApiResponse> updateUserRoles(
             @PathVariable("id") UUID id,
@@ -73,6 +78,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_UPDATE')")
     public ResponseEntity<ApiResponse> editUser(
             @PathVariable("id") UUID id,
             @Valid @RequestBody EditProfileDTO editProfileDTO) {
@@ -81,6 +87,7 @@ public class UserController {
     }
 
     @PatchMapping("/{id}/store")
+    @PreAuthorize("hasAuthority('USER_UPDATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> updateUserStore(
             @PathVariable("id") UUID id,
             @RequestBody UpdateUserStoreDTO dto) {
@@ -89,6 +96,7 @@ public class UserController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('USER_VIEW')")
     public ResponseEntity<ApiResponse> getUsers(
             @RequestParam(value = "search-query", required = false) String searchQuery,
             @RequestParam(value = "is-active", required = false) Boolean isActive,

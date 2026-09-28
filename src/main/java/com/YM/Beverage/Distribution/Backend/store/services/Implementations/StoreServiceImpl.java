@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.store.services.Implementations;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.store.dtos.CreateStoreDTO;
 import com.YM.Beverage.Distribution.Backend.store.dtos.UpdateStoreDTO;
 import com.YM.Beverage.Distribution.Backend.store.models.Store;
@@ -28,6 +29,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
+    private final DataScopeService dataScopeService;
 
     @Override
     public ApiResponse createStore(CreateStoreDTO createStoreDTO) {
@@ -69,7 +71,8 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse getStores(String searchQuery, Boolean isActive, Integer page, Integer pageSize) {
-        Specification<Store> specification = new StoreSpecification(searchQuery, isActive);
+        Specification<Store> specification = new StoreSpecification(
+                searchQuery, isActive, dataScopeService.currentStoreId());
         Sort sort = Sort.by(Sort.Direction.ASC, "name");
 
         if (page == null || pageSize == null) {
@@ -91,6 +94,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse getStoreById(UUID id) {
+        dataScopeService.assertCanAccessStore(id);
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Store with this id is not found"));
 
@@ -99,6 +103,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse editStore(UUID id, UpdateStoreDTO updateStoreDTO) {
+        dataScopeService.assertCanAccessStore(id);
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
@@ -146,6 +151,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse changeActivationStatus(UUID id) {
+        dataScopeService.requireCompanyUser();
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
@@ -166,6 +172,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse deleteStore(UUID id) {
+        dataScopeService.requireCompanyUser();
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 

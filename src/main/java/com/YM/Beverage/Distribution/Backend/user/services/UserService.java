@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.user.services;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.user.dtos.auth.ChangePasswordDTO;
@@ -33,6 +34,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final StoreRepository storeRepository;
+    private final DataScopeService dataScopeService;
 
     public ApiResponse getProfile(UUID userId) {
 
@@ -70,6 +72,11 @@ public class UserService {
                                 List<UUID> roles, UUID storeId,
                                 Integer page, Integer pageSize){
         Sort sort = Sort.by("createdAt").descending();
+
+        UUID requesterStoreId = dataScopeService.currentStoreId();
+        if (requesterStoreId != null) {
+            storeId = requesterStoreId;
+        }
 
         Specification<User> spec = new UserSpecification(
                 searchQuery,
@@ -126,6 +133,7 @@ public class UserService {
         User user = userRepository.findById(id).orElseThrow(
                 () -> new DataNotFoundException("User not found")
         );
+        dataScopeService.assertCanAccessUser(user);
         return new ApiResponse("", HttpStatus.OK, Map.of("user", user.toUserResponseDTO()));
     }
 
@@ -137,6 +145,7 @@ public class UserService {
 
     @Transactional
     public ApiResponse updateUserRolesandPermissions(UUID userId, UpdateUserRolesPermissionsDTO dto) {
+        dataScopeService.requireCompanyUser();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new DataNotFoundException("User not found"));
 
@@ -162,6 +171,7 @@ public class UserService {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new DataNotFoundException("User not found")
         );
+        dataScopeService.assertCanAccessUser(user);
 
         if (editProfileDTO.getFirstName() != null && !editProfileDTO.getFirstName().isBlank()) {
             user.setFirstName(editProfileDTO.getFirstName().trim());
@@ -181,6 +191,7 @@ public class UserService {
 
     @Transactional
     public ApiResponse updateUserStore(UUID userId, UpdateUserStoreDTO dto) {
+        dataScopeService.requireCompanyUser();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new DataNotFoundException("User not found"));
 
@@ -202,6 +213,7 @@ public class UserService {
     public ApiResponse changeActivationStatus(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("User not found"));
+        dataScopeService.assertCanAccessUser(user);
 
         String message;
         if (user.isDeactivated()) {

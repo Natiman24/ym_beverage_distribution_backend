@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @RequestMapping("/api/role")
 @CrossOrigin("*")
 @SecurityRequirement(name = "bearerAuth")
+@PreAuthorize("hasAuthority('ROLE_MANAGE') and @dataScope.isCompanyUser(authentication)")
 public class RoleController {
     private final RoleService roleService;
 

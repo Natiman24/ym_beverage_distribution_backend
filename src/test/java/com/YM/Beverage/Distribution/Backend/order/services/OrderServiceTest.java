@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.order.services;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.driver.repositories.DriverRepository;
 import com.YM.Beverage.Distribution.Backend.order.dtos.CreateOrderDTO;
 import com.YM.Beverage.Distribution.Backend.order.dtos.OrderItemRequestDTO;
@@ -54,6 +55,7 @@ class OrderServiceTest {
     @Mock private ProductHistoryRepository productHistoryRepository;
     @Mock private OrderStatusHistoryRepository orderStatusHistoryRepository;
     @Mock private UserRepository userRepository;
+    @Mock private DataScopeService dataScopeService;
 
     private OrderService orderService;
 
@@ -61,7 +63,7 @@ class OrderServiceTest {
     void setUp() {
         orderService = new OrderService(orderRepository, storeRepository, productRepository,
                 driverRepository, storeTransactionRepository, productHistoryRepository,
-                orderStatusHistoryRepository, userRepository);
+                orderStatusHistoryRepository, userRepository, dataScopeService);
     }
 
     @Test

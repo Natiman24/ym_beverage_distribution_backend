@@ -1,6 +1,7 @@
 package com.YM.Beverage.Distribution.Backend.user.services;
 
 import com.YM.Beverage.Distribution.Backend.configs.security.JwtUtil;
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.user.dtos.auth.CreateUserDTO;
@@ -39,6 +40,7 @@ class AuthServiceTest {
     @Mock private JwtUtil jwtUtil;
     @Mock private RoleRepository roleRepository;
     @Mock private StoreRepository storeRepository;
+    @Mock private DataScopeService dataScopeService;
 
     @Test
     void registrationAssignsActiveStore() {
@@ -69,6 +71,24 @@ class AuthServiceTest {
     }
 
     @Test
+    void storeUserCanOnlyRegisterUsersForTheirOwnStore() {
+        UUID ownStoreId = UUID.randomUUID();
+        UUID attemptedStoreId = UUID.randomUUID();
+        Store ownStore = Store.builder().id(ownStoreId).name("Own Store").active(true).build();
+        CreateUserDTO dto = userDto(attemptedStoreId);
+        when(dataScopeService.currentStoreId()).thenReturn(ownStoreId);
+        when(userRepository.findByEmailIgnoreCase(dto.getEmail())).thenReturn(Optional.empty());
+        when(storeRepository.findByIdAndActiveTrue(ownStoreId)).thenReturn(Optional.of(ownStore));
+
+        service().register(dto);
+
+        ArgumentCaptor<User> user = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).saveAndFlush(user.capture());
+        assertEquals(ownStoreId, user.getValue().getStore().getId());
+        verify(storeRepository, never()).findByIdAndActiveTrue(attemptedStoreId);
+    }
+
+    @Test
     void concurrentDuplicateEmailReturnsDomainConflictBeforeOtpIsSent() {
         CreateUserDTO dto = userDto(null);
         when(userRepository.findByEmailIgnoreCase(dto.getEmail())).thenReturn(Optional.empty());
@@ -82,7 +102,7 @@ class AuthServiceTest {
 
     private AuthService service() {
         return new AuthService(userRepository, refreshTokenRepository, otpService,
-                authenticationManager, jwtUtil, roleRepository, storeRepository);
+                authenticationManager, jwtUtil, roleRepository, storeRepository, dataScopeService);
     }
 
     private CreateUserDTO userDto(UUID storeId) {

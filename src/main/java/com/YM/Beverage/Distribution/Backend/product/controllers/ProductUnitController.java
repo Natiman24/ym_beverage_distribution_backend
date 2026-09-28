@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,12 +23,14 @@ public class ProductUnitController {
     private final ProductUnitService productUnitService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('LOOKUP_CREATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> createUnit(@Valid @RequestBody CreateLookupDTO dto) {
         ApiResponse response = productUnitService.createUnit(dto);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('LOOKUP_VIEW')")
     public ResponseEntity<ApiResponse> getUnits(
             @RequestParam(value = "search-query", required = false) String searchQuery,
             @RequestParam(value = "active", required = false) Boolean active,
@@ -38,12 +41,14 @@ public class ProductUnitController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_VIEW')")
     public ResponseEntity<ApiResponse> getUnitById(@PathVariable UUID id) {
         ApiResponse response = productUnitService.getUnitById(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_UPDATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> updateUnit(@PathVariable UUID id,
                                                   @Valid @RequestBody UpdateLookupDTO dto) {
         ApiResponse response = productUnitService.updateUnit(id, dto);
@@ -51,6 +56,7 @@ public class ProductUnitController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_DELETE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> deleteUnit(@PathVariable UUID id) {
         ApiResponse response = productUnitService.deleteUnit(id);
         return new ResponseEntity<>(response, response.getStatusCode());

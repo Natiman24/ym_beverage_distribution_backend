@@ -69,6 +69,7 @@ public enum Permission {
     USER_DELETE,
     USER_TOGGLE_ACTIVE,
     PROFILE_VIEW,           // Any authenticated user — view own profile
+    PROFILE_UPDATE,         // Any authenticated user — edit own profile/password
 
     // ─── Roles & Permissions ──────────────────────────────────────────────────
     ROLE_MANAGE,

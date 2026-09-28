@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.order.services;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.driver.models.Driver;
 import com.YM.Beverage.Distribution.Backend.driver.repositories.DriverRepository;
 import com.YM.Beverage.Distribution.Backend.order.dtos.*;
@@ -54,6 +55,7 @@ public class OrderService {
     private final ProductHistoryRepository productHistoryRepository;
     private final OrderStatusHistoryRepository orderStatusHistoryRepository;
     private final UserRepository userRepository;
+    private final DataScopeService dataScopeService;
 
     @Transactional
     public ApiResponse createOrder(CreateOrderDTO dto, UUID userId) {
@@ -63,13 +65,8 @@ public class OrderService {
         User requester = userRepository.findById(userId)
                 .orElseThrow(() -> new DataNotFoundException("Requesting user not found"));
 
-        boolean belongsToStore = requester.getStore() != null
-                && requester.getStore().getId().equals(store.getId());
-        boolean isSuperAdmin = requester.getRoles() != null
-                && requester.getRoles().stream()
-                .anyMatch(role -> "Super Admin".equalsIgnoreCase(role.getName()));
-
-        if (!belongsToStore && !isSuperAdmin) {
+        if (requester.getStore() != null
+                && !requester.getStore().getId().equals(store.getId())) {
             throw new CustomException("You are not authorized to create an order for this store", HttpStatus.FORBIDDEN, "");
         }
 
@@ -137,6 +134,11 @@ public class OrderService {
                                   UUID createdByUserId, Boolean overdueCredit, String storeSearch,
                                   Integer page, Integer pageSize) {
 
+        UUID requesterStoreId = dataScopeService.currentStoreId();
+        if (requesterStoreId != null) {
+            storeId = requesterStoreId;
+        }
+
         OrderSpecification spec = new OrderSpecification(
                 storeId, statuses, fromDate, toDate, driverId, paymentMethod, paymentStatus,
                 deliveredFromDate, deliveredToDate, createdByUserId, overdueCredit, storeSearch);
@@ -162,6 +164,7 @@ public class OrderService {
     public ApiResponse getOrderById(UUID id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
         return new ApiResponse("", HttpStatus.OK, Map.of("order", order.toSingleResponseDTO()));
     }
 
@@ -169,6 +172,7 @@ public class OrderService {
     public ApiResponse updateOrder(UUID id, UpdateOrderDTO dto) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() == OrderStatus.DELIVERED
                 || order.getStatus() == OrderStatus.RETURNED
@@ -190,6 +194,7 @@ public class OrderService {
     public ApiResponse confirmOrder(UUID id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() != OrderStatus.DRAFT) {
             throw new CustomException("Only DRAFT orders can be submitted", HttpStatus.BAD_REQUEST, "");
@@ -203,8 +208,10 @@ public class OrderService {
 
     @Transactional
     public ApiResponse approveOrder(UUID id) {
+        dataScopeService.requireCompanyUser();
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() != OrderStatus.SUBMITTED) {
             throw new CustomException("Only SUBMITTED orders can be approved", HttpStatus.BAD_REQUEST, "");
@@ -218,8 +225,10 @@ public class OrderService {
 
     @Transactional
     public ApiResponse assignDriver(UUID id, UUID driverId) {
+        dataScopeService.requireCompanyUser();
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() != OrderStatus.APPROVED) {
             throw new CustomException("A driver can only be assigned to APPROVED orders", HttpStatus.BAD_REQUEST, "");
@@ -241,8 +250,10 @@ public class OrderService {
 
     @Transactional
     public ApiResponse dispatchOrder(UUID id) {
+        dataScopeService.requireCompanyUser();
         Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() != OrderStatus.PROCESSING) {
             throw new CustomException("Only PROCESSING orders can be dispatched", HttpStatus.BAD_REQUEST, "");
@@ -271,8 +282,10 @@ public class OrderService {
 
     @Transactional
     public ApiResponse deliverOrder(UUID id) {
+        dataScopeService.requireCompanyUser();
         Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() != OrderStatus.DISPATCHED) {
             throw new CustomException("Only DISPATCHED orders can be marked as delivered", HttpStatus.BAD_REQUEST, "");
@@ -312,8 +325,10 @@ public class OrderService {
 
     @Transactional
     public ApiResponse returnOrder(UUID id, String reason) {
+        dataScopeService.requireCompanyUser();
         Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.DISPATCHED) {
             throw new CustomException("Only Dispatched and Delivered orders can be returned", HttpStatus.BAD_REQUEST, "");
@@ -393,6 +408,13 @@ public class OrderService {
             throw new DataNotFoundException("Driver not found");
         }
         List<Order> orders = orderRepository.findByDriverIdOrderByOrderDateDesc(driverId);
+        UUID requesterStoreId = dataScopeService.currentStoreId();
+        if (requesterStoreId != null) {
+            orders = orders.stream()
+                    .filter(order -> order.getStore() != null
+                            && requesterStoreId.equals(order.getStore().getId()))
+                    .toList();
+        }
 
         return new ApiResponse("", HttpStatus.OK,
                 Map.of("orders", orders.stream().map(Order::toListResponseDTO).toList()));
@@ -402,6 +424,7 @@ public class OrderService {
     public ApiResponse cancelOrder(UUID id, String reason) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() == OrderStatus.DELIVERED
                 || order.getStatus() == OrderStatus.DISPATCHED
@@ -423,6 +446,7 @@ public class OrderService {
     public ApiResponse deleteOrder(UUID id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
 
         if (order.getStatus() != OrderStatus.DRAFT) {
             throw new CustomException("Only DRAFT orders can be deleted", HttpStatus.BAD_REQUEST, "");
@@ -433,12 +457,20 @@ public class OrderService {
     }
 
     public ApiResponse getStatusHistory(UUID id) {
-        if (!orderRepository.existsById(id)) {
-            throw new DataNotFoundException("Order not found");
-        }
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new DataNotFoundException("Order not found"));
+        assertCanAccess(order);
         return new ApiResponse("", HttpStatus.OK, Map.of(
                 "history", orderStatusHistoryRepository.findByOrderIdOrderByCreatedAtAsc(id)
                         .stream().map(OrderStatusHistory::toResponseDTO).toList()));
+    }
+
+    private void assertCanAccess(Order order) {
+        if (order.getStore() == null) {
+            dataScopeService.requireCompanyUser();
+            return;
+        }
+        dataScopeService.assertCanAccessStore(order.getStore().getId());
     }
 
     private void validatePaymentDueDate(CreateOrderDTO dto) {

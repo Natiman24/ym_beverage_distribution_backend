@@ -17,12 +17,16 @@ class JwtAuthorizationFilterTest {
     void staleAuthorizationHeaderCannotBlockPublicAuthenticationEndpoints() {
         assertTrue(filter.shouldNotFilter(request("POST", "/api/auth/login")));
         assertTrue(filter.shouldNotFilter(request("POST", "/api/auth/refresh")));
-        assertTrue(filter.shouldNotFilter(request("POST", "/api/auth/register")));
+        assertTrue(filter.shouldNotFilter(request("POST", "/api/auth/activate")));
+        assertTrue(filter.shouldNotFilter(request("POST", "/api/auth/request-otp")));
+        assertTrue(filter.shouldNotFilter(request("POST", "/api/auth/verify-otp")));
+        assertTrue(filter.shouldNotFilter(request("POST", "/api/auth/reset-password")));
     }
 
     @Test
     void logoutAndProtectedEndpointsStillUseJwtValidation() {
         assertFalse(filter.shouldNotFilter(request("POST", "/api/auth/logout")));
+        assertFalse(filter.shouldNotFilter(request("POST", "/api/auth/register")));
         assertFalse(filter.shouldNotFilter(request("GET", "/api/orders")));
         assertTrue(filter.shouldNotFilter(request("OPTIONS", "/api/orders")));
     }

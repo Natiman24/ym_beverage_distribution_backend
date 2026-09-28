@@ -6,6 +6,7 @@ import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,12 +20,14 @@ public class DashboardController {
     private final DashboardAnalyticsService dashboardAnalyticsService;
 
     @GetMapping("/summary")
+    @PreAuthorize("hasAuthority('DASHBOARD_VIEW') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> getSummary() {
         ApiResponse response = dashboardService.getSummary();
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @GetMapping("/analytics")
+    @PreAuthorize("hasAuthority('DASHBOARD_VIEW') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> getAnalytics(
             @RequestParam(value = "days", defaultValue = "30") Integer days) {
         ApiResponse response = dashboardAnalyticsService.getAnalytics(days);

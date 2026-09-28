@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.user.services;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UpdateUserStoreDTO;
@@ -25,6 +26,7 @@ class UserServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private RoleRepository roleRepository;
     @Mock private StoreRepository storeRepository;
+    @Mock private DataScopeService dataScopeService;
 
     @Test
     void administratorCanAssignAndRemoveUserStore() {
@@ -39,7 +41,7 @@ class UserServiceTest {
         when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
         when(storeRepository.findByIdAndActiveTrue(store.getId())).thenReturn(Optional.of(store));
 
-        UserService service = new UserService(userRepository, roleRepository, storeRepository);
+        UserService service = new UserService(userRepository, roleRepository, storeRepository, dataScopeService);
         service.updateUserStore(user.getId(), new UpdateUserStoreDTO(store.getId()));
         assertEquals(store, user.getStore());
 

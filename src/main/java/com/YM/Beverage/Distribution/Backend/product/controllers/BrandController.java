@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -22,12 +23,14 @@ public class BrandController {
     private final BrandService brandService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('LOOKUP_CREATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> createBrand(@Valid @RequestBody CreateLookupDTO dto) {
         ApiResponse response = brandService.createBrand(dto);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('LOOKUP_VIEW')")
     public ResponseEntity<ApiResponse> getBrands(
             @RequestParam(value = "search-query", required = false) String searchQuery,
             @RequestParam(value = "active", required = false) Boolean active,
@@ -38,12 +41,14 @@ public class BrandController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_VIEW')")
     public ResponseEntity<ApiResponse> getBrandById(@PathVariable UUID id) {
         ApiResponse response = brandService.getBrandById(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_UPDATE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> updateBrand(@PathVariable UUID id,
                                                    @Valid @RequestBody UpdateLookupDTO dto) {
         ApiResponse response = brandService.updateBrand(id, dto);
@@ -51,6 +56,7 @@ public class BrandController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('LOOKUP_DELETE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> deleteBrand(@PathVariable UUID id) {
         ApiResponse response = brandService.deleteBrand(id);
         return new ResponseEntity<>(response, response.getStatusCode());

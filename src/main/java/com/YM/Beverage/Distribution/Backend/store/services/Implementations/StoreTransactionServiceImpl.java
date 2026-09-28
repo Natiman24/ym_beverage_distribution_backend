@@ -1,5 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.store.services.Implementations;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
 import com.YM.Beverage.Distribution.Backend.order.models.Order;
 import com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus;
 import com.YM.Beverage.Distribution.Backend.order.enums.PaymentStatus;
@@ -31,6 +32,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class StoreTransactionServiceImpl implements StoreTransactionService {
+    private final DataScopeService dataScopeService;
 
     private static final List<TransactionType> PAYMENT_TYPES =
             List.of(TransactionType.CREDIT_REPAYMENT, TransactionType.REFUND, TransactionType.CASH_PAYMENT);
@@ -42,6 +44,8 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
     @Override
     @Transactional
     public ApiResponse createTransaction(UUID storeId, CreateStoreTransactionDTO dto) {
+        dataScopeService.requireCompanyUser();
+        dataScopeService.assertCanAccessStore(storeId);
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
@@ -86,6 +90,7 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
 
     @Override
     public ApiResponse getTransactions(UUID storeId, Integer page, Integer pageSize) {
+        dataScopeService.assertCanAccessStore(storeId);
         if (!storeRepository.existsById(storeId)) {
             throw new DataNotFoundException("Store not found");
         }
@@ -109,6 +114,7 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
 
     @Override
     public ApiResponse getStoreBalance(UUID storeId) {
+        dataScopeService.assertCanAccessStore(storeId);
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
@@ -130,6 +136,7 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
 
     @Override
     public ApiResponse getOrderBalance(UUID storeId, UUID orderId) {
+        dataScopeService.assertCanAccessStore(storeId);
         if (!storeRepository.existsById(storeId)) {
             throw new DataNotFoundException("Store not found");
         }
