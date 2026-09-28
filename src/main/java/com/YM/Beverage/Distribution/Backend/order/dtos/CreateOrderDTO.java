@@ -19,6 +19,9 @@ import java.util.UUID;
 @Builder
 public class CreateOrderDTO {
 
+    /** When false (the default), the order is submitted immediately. */
+    private boolean draft;
+
     @NotNull(message = "Store ID is required")
     private UUID storeId;
 

@@ -4,6 +4,7 @@ import com.YM.Beverage.Distribution.Backend.driver.dtos.DriverResponseDTO;
 import com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus;
 import com.YM.Beverage.Distribution.Backend.order.enums.PaymentMethod;
 import com.YM.Beverage.Distribution.Backend.order.enums.PaymentStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrderSingleResponseDTO {
     private UUID id;
     private UUID storeId;

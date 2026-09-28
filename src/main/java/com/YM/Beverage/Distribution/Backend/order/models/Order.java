@@ -78,6 +78,10 @@ public class Order extends BaseEntity {
     private Long version;
 
     public OrderSingleResponseDTO toSingleResponseDTO() {
+        return toSingleResponseDTO(true);
+    }
+
+    public OrderSingleResponseDTO toSingleResponseDTO(boolean includeCompanyDetails) {
         return com.YM.Beverage.Distribution.Backend.order.dtos.OrderSingleResponseDTO.builder()
                 .id(getId())
                 .storeId(store != null ? store.getId() : null)
@@ -85,9 +89,9 @@ public class Order extends BaseEntity {
                 .status(status)
                 .paymentMethod(paymentMethod)
                 .paymentStatus(paymentStatus)
-                .paymentDueDate(paymentDueDate)
+                .paymentDueDate(includeCompanyDetails ? paymentDueDate : null)
                 .orderDate(orderDate)
-                .expectedDeliveryDate(expectedDeliveryDate)
+                .expectedDeliveryDate(includeCompanyDetails ? expectedDeliveryDate : null)
                 .deliveredAt(deliveredAt)
                 .totalAmount(totalAmount)
                 .deliveryAddress(deliveryAddress)
@@ -101,6 +105,10 @@ public class Order extends BaseEntity {
     }
 
     public OrderListResponseDTO toListResponseDTO() {
+        return toListResponseDTO(true);
+    }
+
+    public OrderListResponseDTO toListResponseDTO(boolean includeCompanyDetails) {
         return com.YM.Beverage.Distribution.Backend.order.dtos.OrderListResponseDTO.builder()
                 .id(getId())
                 .storeId(store != null ? store.getId() : null)
@@ -108,9 +116,9 @@ public class Order extends BaseEntity {
                 .status(status)
                 .paymentMethod(paymentMethod)
                 .paymentStatus(paymentStatus)
-                .paymentDueDate(paymentDueDate)
+                .paymentDueDate(includeCompanyDetails ? paymentDueDate : null)
                 .orderDate(orderDate)
-                .expectedDeliveryDate(expectedDeliveryDate)
+                .expectedDeliveryDate(includeCompanyDetails ? expectedDeliveryDate : null)
                 .deliveredAt(deliveredAt)
                 .totalAmount(totalAmount)
                 .driverName(driver != null ? driver.getFirstName() + " " + driver.getLastName() : null)

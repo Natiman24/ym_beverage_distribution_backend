@@ -28,11 +28,12 @@ public class OrderSpecification implements Specification<Order> {
     private final UUID createdByUserId;
     private final Boolean overdueCredit;
     private final String storeSearch;
+    private final UUID visibleCompanyDraftCreatorId;
 
     public OrderSpecification(UUID storeId, List<OrderStatus> statuses,
                               LocalDateTime fromDate, LocalDateTime toDate) {
         this(storeId, statuses, fromDate, toDate, null, null, null,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     @Override
@@ -41,6 +42,13 @@ public class OrderSpecification implements Specification<Order> {
 
         if (storeId != null) {
             predicate = cb.and(predicate, cb.equal(root.get("store").get("id"), storeId));
+        }
+
+        if (visibleCompanyDraftCreatorId != null) {
+            predicate = cb.and(predicate, cb.or(
+                    cb.notEqual(root.get("status"), OrderStatus.DRAFT),
+                    cb.equal(root.get("createdBy").get("id"), visibleCompanyDraftCreatorId)
+            ));
         }
 
         if (statuses != null && !statuses.isEmpty()) {

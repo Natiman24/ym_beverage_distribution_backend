@@ -104,8 +104,9 @@ public class OrderController {
 
     @PatchMapping("/{id}/dispatch")
     @PreAuthorize("hasAuthority('ORDER_DISPATCH') and @dataScope.isCompanyUser(authentication)")
-    public ResponseEntity<ApiResponse> dispatchOrder(@PathVariable UUID id) {
-        ApiResponse response = orderService.dispatchOrder(id);
+    public ResponseEntity<ApiResponse> dispatchOrder(@PathVariable UUID id,
+                                                      @Valid @RequestBody DispatchOrderDTO dto) {
+        ApiResponse response = orderService.dispatchOrder(id, dto);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 

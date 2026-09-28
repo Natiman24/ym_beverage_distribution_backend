@@ -23,8 +23,16 @@ public class DataScopeService {
     }
 
     public UUID currentStoreId() {
-        User user = authenticatedUser(SecurityContextHolder.getContext().getAuthentication());
+        User user = currentUser();
         return user.getStore() == null ? null : user.getStore().getId();
+    }
+
+    public UUID currentUserId() {
+        return currentUser().getId();
+    }
+
+    public boolean isCurrentUserCompanyUser() {
+        return currentUser().getStore() == null;
     }
 
     public void requireCompanyUser() {
@@ -48,6 +56,10 @@ public class DataScopeService {
         if (targetUser.getStore() == null || !currentStoreId.equals(targetUser.getStore().getId())) {
             throw forbidden();
         }
+    }
+
+    private User currentUser() {
+        return authenticatedUser(SecurityContextHolder.getContext().getAuthentication());
     }
 
     private User authenticatedUser(Authentication authentication) {

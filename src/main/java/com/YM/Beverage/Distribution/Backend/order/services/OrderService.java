@@ -70,60 +70,36 @@ public class OrderService {
             throw new CustomException("You are not authorized to create an order for this store", HttpStatus.FORBIDDEN, "");
         }
 
-        validatePaymentDueDate(dto);
-
-        List<OrderItem> items = new ArrayList<>();
-        BigDecimal subtotal = BigDecimal.ZERO;
+        boolean companyUser = requester.getStore() == null;
+        validateCreateScheduling(dto, companyUser);
+        OrderStatus initialStatus = dto.isDraft() ? OrderStatus.DRAFT : OrderStatus.SUBMITTED;
 
         Order order = Order.builder()
                 .store(store)
-                .status(OrderStatus.DRAFT)
+                .status(initialStatus)
                 .paymentMethod(dto.getPaymentMethod())
                 .paymentStatus(PaymentStatus.UNPAID)
-                .paymentDueDate(dto.getPaymentMethod() == PaymentMethod.CREDIT ? dto.getPaymentDueDate() : null)
+                .paymentDueDate(companyUser && dto.getPaymentMethod() == PaymentMethod.CREDIT
+                        ? dto.getPaymentDueDate() : null)
                 .orderDate(LocalDateTime.now())
-                .expectedDeliveryDate(dto.getExpectedDeliveryDate())
+                .expectedDeliveryDate(companyUser ? dto.getExpectedDeliveryDate() : null)
                 .deliveryAddress(dto.getDeliveryAddress())
                 .notes(dto.getNotes())
                 .totalAmount(BigDecimal.ZERO)
                 .build();
 
-        for (OrderItemRequestDTO itemDTO : dto.getItems()) {
-            Product product = productRepository.findByIdAndActiveTrue(itemDTO.getProductId())
-                    .orElseThrow(() -> new DataNotFoundException(
-                            "Active product not found: " + itemDTO.getProductId()));
-
-            BigDecimal unitPrice = itemDTO.getUnitPrice() != null
-                    ? itemDTO.getUnitPrice()
-                    : product.getSellingPrice();
-            BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemDTO.getQuantity()));
-            subtotal = subtotal.add(totalPrice);
-
-            OrderItem item = OrderItem.builder()
-                    .order(order)
-                    .product(product)
-                    .quantity(itemDTO.getQuantity())
-                    .unitPrice(unitPrice)
-                    .totalPrice(totalPrice)
-                    .build();
-            items.add(item);
-        }
-
+        List<OrderItem> items = buildItems(order, dto.getItems());
+        BigDecimal subtotal = calculateTotal(items);
         order.setTotalAmount(subtotal);
         order.setItems(items);
-
-        if (dto.getTotalPrice().compareTo(subtotal) != 0) {
-            throw new CustomException(
-                    "Order total mismatch: submitted " + dto.getTotalPrice() + ", calculated " + subtotal,
-                    HttpStatus.BAD_REQUEST,
-                    "Recalculate the total from each item's unit price and quantity");
-        }
+        verifySubmittedTotal(dto.getTotalPrice(), subtotal);
 
         orderRepository.save(order);
-        recordStatusChange(order, null, OrderStatus.DRAFT, null);
+        recordStatusChange(order, null, initialStatus, null);
 
-        return new ApiResponse("Order created successfully", HttpStatus.CREATED,
-                Map.of("order", order.toSingleResponseDTO()));
+        String message = dto.isDraft() ? "Draft order saved successfully" : "Order submitted successfully";
+        return new ApiResponse(message, HttpStatus.CREATED,
+                Map.of("order", order.toSingleResponseDTO(companyUser)));
     }
 
     public ApiResponse getOrders(UUID storeId, List<OrderStatus> statuses,
@@ -135,26 +111,33 @@ public class OrderService {
                                   Integer page, Integer pageSize) {
 
         UUID requesterStoreId = dataScopeService.currentStoreId();
+        boolean companyUser = requesterStoreId == null;
         if (requesterStoreId != null) {
             storeId = requesterStoreId;
+            overdueCredit = null;
         }
+
+        UUID visibleCompanyDraftCreatorId = companyUser ? dataScopeService.currentUserId() : null;
 
         OrderSpecification spec = new OrderSpecification(
                 storeId, statuses, fromDate, toDate, driverId, paymentMethod, paymentStatus,
-                deliveredFromDate, deliveredToDate, createdByUserId, overdueCredit, storeSearch);
+                deliveredFromDate, deliveredToDate, createdByUserId, overdueCredit, storeSearch,
+                visibleCompanyDraftCreatorId);
         Sort sort = Sort.by(Sort.Direction.DESC, "orderDate");
 
         if (page == null || pageSize == null) {
             List<Order> orders = orderRepository.findAll(spec, sort);
             return new ApiResponse("", HttpStatus.OK,
-                    Map.of("orders", orders.stream().map(Order::toListResponseDTO).toList()));
+                    Map.of("orders", orders.stream()
+                            .map(order -> order.toListResponseDTO(companyUser)).toList()));
         }
 
         Pageable pageable = PageRequest.of(page - 1, pageSize, sort);
         Page<Order> pageResult = orderRepository.findAll(spec, pageable);
 
         return new ApiResponse("", HttpStatus.OK, Map.of(
-                "orders", pageResult.getContent().stream().map(Order::toListResponseDTO).toList(),
+                "orders", pageResult.getContent().stream()
+                        .map(order -> order.toListResponseDTO(companyUser)).toList(),
                 "pageSize", pageSize,
                 "currentPage", page,
                 "totalPages", pageResult.getTotalPages(),
@@ -165,7 +148,8 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
         assertCanAccess(order);
-        return new ApiResponse("", HttpStatus.OK, Map.of("order", order.toSingleResponseDTO()));
+        return new ApiResponse("", HttpStatus.OK,
+                Map.of("order", order.toSingleResponseDTO(dataScopeService.isCurrentUserCompanyUser())));
     }
 
     @Transactional
@@ -174,20 +158,57 @@ public class OrderService {
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
         assertCanAccess(order);
 
-        if (order.getStatus() == OrderStatus.DELIVERED
-                || order.getStatus() == OrderStatus.RETURNED
-                || order.getStatus() == OrderStatus.CANCELLED
-                || order.getStatus() == OrderStatus.DISPATCHED) {
-            throw new CustomException("Cannot update a " + order.getStatus().name().toLowerCase() + " order", HttpStatus.BAD_REQUEST, "");
+        if (order.getStatus() != OrderStatus.DRAFT) {
+            throw new CustomException("Only DRAFT orders can be edited", HttpStatus.BAD_REQUEST, "");
         }
 
-        if (dto.getExpectedDeliveryDate() != null) order.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+        boolean companyUser = dataScopeService.isCurrentUserCompanyUser();
+        if (!companyUser && (dto.getExpectedDeliveryDate() != null || dto.getPaymentDueDate() != null)) {
+            throw new CustomException(
+                    "Expected delivery date and payment due date are managed by the distribution company",
+                    HttpStatus.FORBIDDEN,
+                    "company_only_order_schedule");
+        }
+
+        if (dto.getPaymentMethod() != null) {
+            order.setPaymentMethod(dto.getPaymentMethod());
+            if (dto.getPaymentMethod() != PaymentMethod.CREDIT) {
+                order.setPaymentDueDate(null);
+            }
+        }
+        if (companyUser && dto.getExpectedDeliveryDate() != null) {
+            validateExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+            order.setExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+        }
+        if (companyUser && dto.getPaymentDueDate() != null) {
+            validatePaymentDueDate(order.getPaymentMethod(), dto.getPaymentDueDate(), false);
+            order.setPaymentDueDate(dto.getPaymentDueDate());
+        }
         if (dto.getDeliveryAddress() != null) order.setDeliveryAddress(dto.getDeliveryAddress());
         if (dto.getNotes() != null) order.setNotes(dto.getNotes());
 
+        if (dto.getItems() != null) {
+            if (dto.getTotalPrice() == null) {
+                throw new CustomException("Total price is required when editing order items",
+                        HttpStatus.BAD_REQUEST, "");
+            }
+            List<OrderItem> replacementItems = buildItems(order, dto.getItems());
+            BigDecimal replacementTotal = calculateTotal(replacementItems);
+            verifySubmittedTotal(dto.getTotalPrice(), replacementTotal);
+            order.getItems().clear();
+            order.getItems().addAll(replacementItems);
+            order.setTotalAmount(replacementTotal);
+        } else if (dto.getTotalPrice() != null
+                && dto.getTotalPrice().compareTo(order.getTotalAmount()) != 0) {
+            throw new CustomException("Total price can only change when order items are supplied",
+                    HttpStatus.BAD_REQUEST, "");
+        }
+
+        validatePaymentDueDate(order.getPaymentMethod(), order.getPaymentDueDate(), false);
+
         orderRepository.save(order);
         return new ApiResponse("Order updated successfully", HttpStatus.OK,
-                Map.of("order", order.toSingleResponseDTO()));
+                Map.of("order", order.toSingleResponseDTO(companyUser)));
     }
 
     @Transactional
@@ -203,7 +224,7 @@ public class OrderService {
         changeStatus(order, OrderStatus.SUBMITTED, null);
         orderRepository.save(order);
         return new ApiResponse("Order submitted successfully", HttpStatus.OK,
-                Map.of("order", order.toSingleResponseDTO()));
+                Map.of("order", order.toSingleResponseDTO(dataScopeService.isCurrentUserCompanyUser())));
     }
 
     @Transactional
@@ -249,7 +270,7 @@ public class OrderService {
     }
 
     @Transactional
-    public ApiResponse dispatchOrder(UUID id) {
+    public ApiResponse dispatchOrder(UUID id, DispatchOrderDTO dto) {
         dataScopeService.requireCompanyUser();
         Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
@@ -258,6 +279,20 @@ public class OrderService {
         if (order.getStatus() != OrderStatus.PROCESSING) {
             throw new CustomException("Only PROCESSING orders can be dispatched", HttpStatus.BAD_REQUEST, "");
         }
+
+        LocalDateTime expectedDeliveryDate = dto.getExpectedDeliveryDate() != null
+                ? dto.getExpectedDeliveryDate() : order.getExpectedDeliveryDate();
+        if (expectedDeliveryDate == null) {
+            throw new CustomException("Expected delivery date is required when dispatching an order",
+                    HttpStatus.BAD_REQUEST, "");
+        }
+        LocalDate paymentDueDate = dto.getPaymentDueDate() != null
+                ? dto.getPaymentDueDate() : order.getPaymentDueDate();
+        validateExpectedDeliveryDate(expectedDeliveryDate);
+        validatePaymentDueDate(order.getPaymentMethod(), paymentDueDate, true);
+        order.setExpectedDeliveryDate(expectedDeliveryDate);
+        order.setPaymentDueDate(order.getPaymentMethod() == PaymentMethod.CREDIT
+                ? paymentDueDate : null);
 
         Map<UUID, Integer> quantitiesByProduct = aggregateItemQuantities(order);
         List<Product> products = lockAndValidateProducts(quantitiesByProduct);
@@ -439,7 +474,7 @@ public class OrderService {
         changeStatus(order, OrderStatus.CANCELLED, reason);
         orderRepository.save(order);
         return new ApiResponse("Order cancelled successfully", HttpStatus.OK,
-                Map.of("order", order.toSingleResponseDTO()));
+                Map.of("order", order.toSingleResponseDTO(dataScopeService.isCurrentUserCompanyUser())));
     }
 
     @Transactional
@@ -466,23 +501,99 @@ public class OrderService {
     }
 
     private void assertCanAccess(Order order) {
-        if (order.getStore() == null) {
-            dataScopeService.requireCompanyUser();
+        UUID requesterStoreId = dataScopeService.currentStoreId();
+        if (requesterStoreId != null) {
+            if (order.getStore() == null) {
+                throw draftAccessDenied();
+            }
+            dataScopeService.assertCanAccessStore(order.getStore().getId());
             return;
         }
-        dataScopeService.assertCanAccessStore(order.getStore().getId());
+
+        if (order.getStatus() == OrderStatus.DRAFT) {
+            UUID creatorId = order.getCreatedBy() != null ? order.getCreatedBy().getId() : null;
+            if (creatorId == null || !creatorId.equals(dataScopeService.currentUserId())) {
+                throw draftAccessDenied();
+            }
+        }
     }
 
-    private void validatePaymentDueDate(CreateOrderDTO dto) {
-        if (dto.getPaymentMethod() == PaymentMethod.CREDIT) {
-            if (dto.getPaymentDueDate() == null) {
+    private CustomException draftAccessDenied() {
+        return new CustomException(
+                "Draft orders are only visible to the target store and the company user who created the draft",
+                HttpStatus.FORBIDDEN,
+                "draft_order_access_denied");
+    }
+
+    private void validateCreateScheduling(CreateOrderDTO dto, boolean companyUser) {
+        if (!companyUser && (dto.getExpectedDeliveryDate() != null || dto.getPaymentDueDate() != null)) {
+            throw new CustomException(
+                    "Expected delivery date and payment due date are managed by the distribution company",
+                    HttpStatus.FORBIDDEN,
+                    "company_only_order_schedule");
+        }
+        if (companyUser && dto.getExpectedDeliveryDate() != null) {
+            validateExpectedDeliveryDate(dto.getExpectedDeliveryDate());
+        }
+        if (companyUser) {
+            validatePaymentDueDate(dto.getPaymentMethod(), dto.getPaymentDueDate(), false);
+        }
+    }
+
+    private void validateExpectedDeliveryDate(LocalDateTime expectedDeliveryDate) {
+        if (expectedDeliveryDate.isBefore(LocalDateTime.now())) {
+            throw new CustomException("Expected delivery date cannot be in the past",
+                    HttpStatus.BAD_REQUEST, "");
+        }
+    }
+
+    private void validatePaymentDueDate(PaymentMethod paymentMethod, LocalDate paymentDueDate,
+                                        boolean requiredForCredit) {
+        if (paymentMethod == PaymentMethod.CREDIT) {
+            if (requiredForCredit && paymentDueDate == null) {
                 throw new CustomException("Payment due date is required for credit orders", HttpStatus.BAD_REQUEST, "");
             }
-            if (dto.getPaymentDueDate().isBefore(LocalDate.now())) {
+            if (paymentDueDate != null && paymentDueDate.isBefore(LocalDate.now())) {
                 throw new CustomException("Payment due date cannot be in the past", HttpStatus.BAD_REQUEST, "");
             }
-        } else if (dto.getPaymentDueDate() != null) {
+        } else if (paymentDueDate != null) {
             throw new CustomException("Payment due date is only allowed for credit orders", HttpStatus.BAD_REQUEST, "");
+        }
+    }
+
+    private List<OrderItem> buildItems(Order order, List<OrderItemRequestDTO> itemDTOs) {
+        List<OrderItem> items = new ArrayList<>();
+        for (OrderItemRequestDTO itemDTO : itemDTOs) {
+            Product product = productRepository.findByIdAndActiveTrue(itemDTO.getProductId())
+                    .orElseThrow(() -> new DataNotFoundException(
+                            "Active product not found: " + itemDTO.getProductId()));
+            BigDecimal unitPrice = itemDTO.getUnitPrice() != null
+                    ? itemDTO.getUnitPrice()
+                    : product.getSellingPrice();
+            BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemDTO.getQuantity()));
+            items.add(OrderItem.builder()
+                    .order(order)
+                    .product(product)
+                    .quantity(itemDTO.getQuantity())
+                    .unitPrice(unitPrice)
+                    .totalPrice(totalPrice)
+                    .build());
+        }
+        return items;
+    }
+
+    private BigDecimal calculateTotal(List<OrderItem> items) {
+        return items.stream()
+                .map(OrderItem::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void verifySubmittedTotal(BigDecimal submittedTotal, BigDecimal calculatedTotal) {
+        if (submittedTotal.compareTo(calculatedTotal) != 0) {
+            throw new CustomException(
+                    "Order total mismatch: submitted " + submittedTotal + ", calculated " + calculatedTotal,
+                    HttpStatus.BAD_REQUEST,
+                    "Recalculate the total from each item's unit price and quantity");
         }
     }
 
