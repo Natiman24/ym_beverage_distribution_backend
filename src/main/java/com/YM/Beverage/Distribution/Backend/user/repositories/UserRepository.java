@@ -12,6 +12,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface UserRepository extends JpaRepository<User, UUID> , JpaSpecificationExecutor<User> {
+    long countByRoles_Id(UUID roleId);
+
     List<User> findByIdIn(List<UUID> ids, Sort sort);
 
     Page<User> findByIdIn(List<UUID> ids, Pageable pageable);

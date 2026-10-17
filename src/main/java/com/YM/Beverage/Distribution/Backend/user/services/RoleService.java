@@ -5,6 +5,7 @@ import com.YM.Beverage.Distribution.Backend.user.dtos.role.UpdateRoleDTO;
 import com.YM.Beverage.Distribution.Backend.user.models.Role;
 import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.user.repositories.RoleRepository;
+import com.YM.Beverage.Distribution.Backend.user.repositories.UserRepository;
 import com.YM.Beverage.Distribution.Backend.user.specification.RoleSpecification;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.DataAlreadyExistsException;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.DataNotFoundException;
@@ -28,6 +29,7 @@ import java.util.Arrays;
 @RequiredArgsConstructor
 public class RoleService {
     private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
 
     public ApiResponse getPermissions() {
         return new ApiResponse("", HttpStatus.OK, Map.of(
@@ -76,7 +78,9 @@ public class RoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Role not found"));
 
-        return new ApiResponse("", HttpStatus.OK, Map.of("role", role.toResponseDTO()));
+        return new ApiResponse("", HttpStatus.OK, Map.of(
+                "role", role.toResponseDTO(),
+                "userCount", userRepository.countByRoles_Id(role.getId())));
     }
 
     public ApiResponse updateRole(UUID id, UpdateRoleDTO dto) {
