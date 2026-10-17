@@ -9,6 +9,7 @@ import com.YM.Beverage.Distribution.Backend.user.repositories.UserRepository;
 import com.YM.Beverage.Distribution.Backend.user.specification.RoleSpecification;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.DataAlreadyExistsException;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.DataNotFoundException;
+import com.YM.Beverage.Distribution.Backend.utils.exceptions.CustomException;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,6 +29,8 @@ import java.util.Arrays;
 @Service
 @RequiredArgsConstructor
 public class RoleService {
+    private static final String SUPER_ADMIN_ROLE = "Super Admin";
+
     private final RoleRepository roleRepository;
     private final UserRepository userRepository;
 
@@ -87,6 +90,10 @@ public class RoleService {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Role not found"));
 
+        if (SUPER_ADMIN_ROLE.equalsIgnoreCase(role.getName())) {
+            throw new CustomException("The Super Admin role cannot be edited", HttpStatus.FORBIDDEN, "protected_role");
+        }
+
         if (dto.getName() != null && !dto.getName().isBlank()) {
             Optional<Role> existingByName = roleRepository.findByNameIgnoreCase(dto.getName());
             if (existingByName.isPresent() && !existingByName.get().getId().equals(role.getId())) {
@@ -108,6 +115,10 @@ public class RoleService {
     public ApiResponse deleteRole(UUID id) {
         Role role = roleRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Role not found"));
+
+        if (SUPER_ADMIN_ROLE.equalsIgnoreCase(role.getName())) {
+            throw new CustomException("The Super Admin role cannot be deleted", HttpStatus.FORBIDDEN, "protected_role");
+        }
 
         roleRepository.delete(role);
 
