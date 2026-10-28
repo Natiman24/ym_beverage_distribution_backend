@@ -44,6 +44,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -87,7 +90,8 @@ public class OrderService {
                         ? dto.getPaymentDueDate() : null)
                 .orderDate(LocalDateTime.now())
                 .expectedDeliveryDate(companyUser ? dto.getExpectedDeliveryDate() : null)
-                .deliveryAddress(dto.getDeliveryAddress())
+                .deliveryAddress(dto.getDeliveryAddress() != null && !dto.getDeliveryAddress().isBlank()
+                        ? dto.getDeliveryAddress() : defaultDeliveryAddress(store))
                 .notes(dto.getNotes())
                 .totalAmount(BigDecimal.ZERO)
                 .build();
@@ -104,6 +108,14 @@ public class OrderService {
         String message = dto.isDraft() ? "Draft order saved successfully" : "Order submitted successfully";
         return new ApiResponse(message, HttpStatus.CREATED,
                 Map.of("order", order.toSingleResponseDTO(companyUser)));
+    }
+
+    private String defaultDeliveryAddress(Store store) {
+        return Stream.of(store.getSubCity(), store.getAddress(), store.getCity())
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .collect(Collectors.joining(", "));
     }
 
     public ApiResponse getOrders(UUID storeId, List<OrderStatus> statuses,
@@ -165,13 +177,13 @@ public class OrderService {
     public ApiResponse updateOrder(UUID id, UpdateOrderDTO dto) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
-        assertCanAccess(order, Permission.ORDER_UPDATE);
+        boolean companyUser = dataScopeService.isCurrentUserCompanyUser();
+        assertCanAccess(order, companyUser ? Permission.ORDER_UPDATE : Permission.ORDER_CREATE);
 
         if (order.getStatus() != OrderStatus.DRAFT) {
             throw new CustomException("Only DRAFT orders can be edited", HttpStatus.BAD_REQUEST, "");
         }
 
-        boolean companyUser = dataScopeService.isCurrentUserCompanyUser();
         if (!companyUser && (dto.getExpectedDeliveryDate() != null || dto.getPaymentDueDate() != null)) {
             throw new CustomException(
                     "Expected delivery date and payment due date are managed by the distribution company",
@@ -224,7 +236,8 @@ public class OrderService {
     public ApiResponse confirmOrder(UUID id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
-        assertCanAccess(order, Permission.ORDER_CONFIRM);
+        boolean companyUser = dataScopeService.isCurrentUserCompanyUser();
+        assertCanAccess(order, companyUser ? Permission.ORDER_CONFIRM : Permission.ORDER_CREATE);
 
         if (order.getStatus() != OrderStatus.DRAFT) {
             throw new CustomException("Only DRAFT orders can be submitted", HttpStatus.BAD_REQUEST, "");
@@ -233,7 +246,7 @@ public class OrderService {
         changeStatus(order, OrderStatus.SUBMITTED, null);
         orderRepository.save(order);
         return new ApiResponse("Order submitted successfully", HttpStatus.OK,
-                Map.of("order", order.toSingleResponseDTO(dataScopeService.isCurrentUserCompanyUser())));
+                Map.of("order", order.toSingleResponseDTO(companyUser)));
     }
 
     @Transactional
@@ -473,17 +486,27 @@ public class OrderService {
     public ApiResponse cancelOrder(UUID id, String reason) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
-        assertCanAccess(order, Permission.ORDER_CANCEL);
 
-        if (order.getStatus() == OrderStatus.DELIVERED
-                || order.getStatus() == OrderStatus.DISPATCHED
-                || order.getStatus() == OrderStatus.RETURNED) {
-            throw new CustomException("Cannot cancel a " + order.getStatus().name().toLowerCase() + " order",
+        boolean canCancelUntilDispatch = dataScopeService.hasPermission(Permission.ORDER_CANCEL_UNTIL_DISPATCH);
+        boolean isBeforeDispatch = order.getStatus() == OrderStatus.DRAFT
+                || order.getStatus() == OrderStatus.SUBMITTED
+                || order.getStatus() == OrderStatus.APPROVED
+                || order.getStatus() == OrderStatus.PROCESSING;
+        if (!isBeforeDispatch) {
+            throw new CustomException("Orders can only be cancelled before dispatch",
                     HttpStatus.BAD_REQUEST, "");
         }
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            throw new CustomException("Order is already cancelled", HttpStatus.BAD_REQUEST, "");
+
+        if (!canCancelUntilDispatch
+                && order.getStatus() != OrderStatus.DRAFT
+                && order.getStatus() != OrderStatus.SUBMITTED) {
+            throw new CustomException("This order requires cancel-until-dispatch permission",
+                    HttpStatus.FORBIDDEN, "cancel_until_dispatch_required");
         }
+
+        assertCanAccess(order, canCancelUntilDispatch
+                ? Permission.ORDER_CANCEL_UNTIL_DISPATCH
+                : Permission.ORDER_CANCEL);
 
         changeStatus(order, OrderStatus.CANCELLED, reason);
         orderRepository.save(order);
@@ -591,7 +614,7 @@ public class OrderService {
             Product product = productRepository.findByIdAndActiveTrue(itemDTO.getProductId())
                     .orElseThrow(() -> new DataNotFoundException(
                             "Active product not found: " + itemDTO.getProductId()));
-            BigDecimal unitPrice = itemDTO.getUnitPrice() != null
+            BigDecimal unitPrice = dataScopeService.hasPermission(Permission.ORDER_ADJUST_PRICE) && itemDTO.getUnitPrice() != null
                     ? itemDTO.getUnitPrice()
                     : product.getSellingPrice();
             BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(itemDTO.getQuantity()));

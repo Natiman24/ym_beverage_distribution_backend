@@ -7,6 +7,7 @@ public enum Permission {
     ORDER_VIEW,             // DRIVER
     ORDER_FILTER,
     ORDER_UPDATE,
+    ORDER_ADJUST_PRICE,
     ORDER_DELETE,
     ORDER_CONFIRM,
     ORDER_APPROVE,
@@ -16,6 +17,7 @@ public enum Permission {
     ORDER_RETURN,           // DRIVER
     ORDER_CONFIRM_DELIVERY,    // DRIVER
     ORDER_CANCEL,
+    ORDER_CANCEL_UNTIL_DISPATCH,
 
     // ─── Drivers ──────────────────────────────────────────────────────────────
     DRIVER_CREATE,

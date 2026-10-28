@@ -29,6 +29,9 @@ public class UserResponseDTO {
     private Map<Permission, PermissionScope> permissionScopes;
     private UUID storeId;
     private String storeName;
+    private String storeCity;
+    private String storeSubCity;
+    private String storeAddress;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private AuditUserResponseDTO createdBy;

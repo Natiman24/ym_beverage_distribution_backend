@@ -65,6 +65,15 @@ public class DataScopeService {
         return effective.limitedTo(maximumScope(user));
     }
 
+    public boolean hasPermission(Permission permission) {
+        User user = currentUser();
+        if (user.getPermissions() != null && user.getPermissions().contains(permission)) {
+            return true;
+        }
+        return user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(role -> role.getPermissions() != null && role.getPermissions().contains(permission));
+    }
+
     public void requireCompanyUser() {
         if (!isCurrentUserCompanyUser()) {
             throw new CustomException(

@@ -81,7 +81,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAuthority('ORDER_UPDATE')")
+    @PreAuthorize("hasAuthority('ORDER_UPDATE') or (hasAuthority('ORDER_CREATE') and !@dataScope.isCompanyUser(authentication))")
     public ResponseEntity<ApiResponse> updateOrder(@PathVariable UUID id,
                                                    @Valid @RequestBody UpdateOrderDTO dto) {
         ApiResponse response = orderService.updateOrder(id, dto);
@@ -89,7 +89,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/confirm")
-    @PreAuthorize("hasAuthority('ORDER_CONFIRM')")
+    @PreAuthorize("hasAuthority('ORDER_CONFIRM') or (hasAuthority('ORDER_CREATE') and !@dataScope.isCompanyUser(authentication))")
     public ResponseEntity<ApiResponse> confirmOrder(@PathVariable UUID id) {
         ApiResponse response = orderService.confirmOrder(id);
         return new ResponseEntity<>(response, response.getStatusCode());
@@ -133,7 +133,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/cancel")
-    @PreAuthorize("hasAuthority('ORDER_CANCEL')")
+    @PreAuthorize("hasAuthority('ORDER_CANCEL') or hasAuthority('ORDER_CANCEL_UNTIL_DISPATCH')")
     public ResponseEntity<ApiResponse> cancelOrder(@PathVariable UUID id,
                                                    @Valid @RequestBody CancelOrderDTO dto) {
         ApiResponse response = orderService.cancelOrder(id, dto.getReason());
