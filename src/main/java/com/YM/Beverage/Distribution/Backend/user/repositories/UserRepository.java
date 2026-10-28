@@ -29,4 +29,5 @@ public interface UserRepository extends JpaRepository<User, UUID> , JpaSpecifica
     void deleteByEmail(String email);
 
     Optional<User> findByIdAndIsDeactivatedFalse(UUID userId);
+
 }

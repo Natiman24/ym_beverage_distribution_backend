@@ -183,17 +183,6 @@ public class StoreServiceImpl implements StoreService {
                 Map.of("store", store.toSingleResponseDTO()));
     }
 
-    @Override
-    public ApiResponse deleteStore(UUID id) {
-        dataScopeService.requireCompanyUser();
-        Store store = storeRepository.findById(id)
-                .orElseThrow(() -> new DataNotFoundException("Store not found"));
-
-        storeRepository.delete(store);
-
-        return new ApiResponse("Store deleted successfully", HttpStatus.OK);
-    }
-
     private void verifyPhoneNumber(String phoneNumber) {
         if (!phoneNumber.matches("^\\+251[0-9]{9}$")) {
             throw new CustomException("Invalid phone number format", HttpStatus.BAD_REQUEST, "invalid_phone_number");

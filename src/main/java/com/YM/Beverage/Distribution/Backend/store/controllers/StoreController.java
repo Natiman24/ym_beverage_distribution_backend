@@ -57,13 +57,6 @@ public class StoreController {
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }
 
-    @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('STORE_DELETE') and @dataScope.isCompanyUser(authentication)")
-    public ResponseEntity<ApiResponse> deleteStore(@PathVariable UUID id) {
-        ApiResponse apiResponse = storeService.deleteStore(id);
-        return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
-    }
-
     @PatchMapping("/{id}/activation")
     @PreAuthorize("hasAuthority('STORE_TOGGLE_ACTIVE') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> changeActivationStatus(@PathVariable UUID id) {

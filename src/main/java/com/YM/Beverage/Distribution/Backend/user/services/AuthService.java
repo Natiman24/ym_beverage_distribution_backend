@@ -144,6 +144,10 @@ public class AuthService {
                 return new ApiResponse("Your account is deactivated", HttpStatus.UNAUTHORIZED);
             }
 
+            if (user.getStore() != null && !user.getStore().isActive()) {
+                return new ApiResponse("Your store is deactivated", HttpStatus.UNAUTHORIZED);
+            }
+
             String accessToken = jwtUtil.createAccessToken(user);
             String refreshToken = jwtUtil.createRefreshToken(user.getId());
             storeRefreshToken(user.getId(),refreshToken);
@@ -200,6 +204,9 @@ public class AuthService {
         );
         if (!user.isActive()) {
             return new ApiResponse("Your account is deactivated",HttpStatus.UNAUTHORIZED);
+        }
+        if (user.getStore() != null && !user.getStore().isActive()) {
+            return new ApiResponse("Your store is deactivated", HttpStatus.UNAUTHORIZED);
         }
 
         String accessToken = jwtUtil.createAccessToken(user);

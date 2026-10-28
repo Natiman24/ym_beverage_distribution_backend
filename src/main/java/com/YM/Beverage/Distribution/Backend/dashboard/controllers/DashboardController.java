@@ -7,7 +7,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequiredArgsConstructor
@@ -29,8 +32,10 @@ public class DashboardController {
     @GetMapping("/analytics")
     @PreAuthorize("hasAuthority('DASHBOARD_VIEW') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> getAnalytics(
-            @RequestParam(value = "days", defaultValue = "30") Integer days) {
-        ApiResponse response = dashboardAnalyticsService.getAnalytics(days);
+            @RequestParam(value = "days", required = false) Integer days,
+            @RequestParam(value = "from-date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(value = "to-date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+        ApiResponse response = dashboardAnalyticsService.getAnalytics(days, fromDate, toDate);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 }

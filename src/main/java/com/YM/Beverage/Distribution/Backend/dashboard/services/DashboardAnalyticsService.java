@@ -7,6 +7,7 @@ import com.YM.Beverage.Distribution.Backend.order.repositories.OrderRepository;
 import com.YM.Beverage.Distribution.Backend.product.repositories.ProductRepository;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
+import com.YM.Beverage.Distribution.Backend.utils.exceptions.CustomException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.math.RoundingMode;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -27,10 +29,30 @@ public class DashboardAnalyticsService {
     private final DriverProfileRepository driverProfileRepository;
 
     public ApiResponse getAnalytics(int days) {
-        int safeDays = Math.max(7, Math.min(days, 365));
+        return getAnalytics(days, null, null);
+    }
+
+    public ApiResponse getAnalytics(Integer days, LocalDate requestedFrom, LocalDate requestedTo) {
         LocalDate today = LocalDate.now();
-        LocalDateTime to = today.plusDays(1).atStartOfDay();
-        LocalDateTime from = today.minusDays(safeDays - 1L).atStartOfDay();
+        boolean usesCustomRange = requestedFrom != null || requestedTo != null;
+        if (usesCustomRange && (requestedFrom == null || requestedTo == null)) {
+            throw new CustomException("Both from-date and to-date are required for a custom date range", HttpStatus.BAD_REQUEST, "");
+        }
+
+        if (usesCustomRange && (requestedFrom.isAfter(today) || requestedTo.isAfter(today))) {
+            throw new CustomException("Dashboard dates cannot be after today", HttpStatus.BAD_REQUEST, "");
+        }
+
+        LocalDate periodStart = usesCustomRange ? requestedFrom : today.minusDays(Math.max(1, Math.min(days == null ? 30 : days, 365)) - 1L);
+        LocalDate periodEnd = usesCustomRange ? requestedTo : today;
+        long periodLength = ChronoUnit.DAYS.between(periodStart, periodEnd) + 1;
+        if (periodLength < 1 || periodLength > 365) {
+            throw new CustomException("The dashboard date range must be between 1 and 365 days", HttpStatus.BAD_REQUEST, "");
+        }
+
+        int safeDays = (int) periodLength;
+        LocalDateTime from = periodStart.atStartOfDay();
+        LocalDateTime to = periodEnd.plusDays(1).atStartOfDay();
         LocalDateTime previousFrom = from.minusDays(safeDays);
 
         long orders = orderRepository.countReportableOrders(from, to);
@@ -58,7 +80,7 @@ public class DashboardAnalyticsService {
 
         long activeProducts = productRepository.countByActiveTrue();
         DashboardAnalyticsDTO analytics = DashboardAnalyticsDTO.builder()
-                .periodDays(safeDays).periodStart(from.toLocalDate()).periodEnd(today).generatedAt(LocalDateTime.now())
+                .periodDays(safeDays).periodStart(periodStart).periodEnd(periodEnd).generatedAt(LocalDateTime.now())
                 .kpis(DashboardAnalyticsDTO.KPI.builder()
                         .orders(orders).ordersChangePercent(change(orders, previousOrders))
                         .deliveredOrders(delivered).deliveryRatePercent(percent(delivered, orders))
