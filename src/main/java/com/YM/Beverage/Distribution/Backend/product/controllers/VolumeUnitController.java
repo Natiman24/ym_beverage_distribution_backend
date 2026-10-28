@@ -1,8 +1,10 @@
 package com.YM.Beverage.Distribution.Backend.product.controllers;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.product.dtos.CreateLookupDTO;
 import com.YM.Beverage.Distribution.Backend.product.dtos.UpdateLookupDTO;
 import com.YM.Beverage.Distribution.Backend.product.services.VolumeUnitService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import java.util.UUID;
 public class VolumeUnitController {
 
     private final VolumeUnitService volumeUnitService;
+    private final FilterPermissionGuard filterPermissionGuard;
 
     @PostMapping
     @PreAuthorize("hasAuthority('LOOKUP_CREATE') and @dataScope.isCompanyUser(authentication)")
@@ -36,6 +39,7 @@ public class VolumeUnitController {
             @RequestParam(value = "active", required = false) Boolean active,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
+        filterPermissionGuard.requireWhenFiltering(Permission.LOOKUP_FILTER, searchQuery, active);
         ApiResponse response = volumeUnitService.getVolumeUnits(searchQuery, active, page, pageSize);
         return new ResponseEntity<>(response, response.getStatusCode());
     }

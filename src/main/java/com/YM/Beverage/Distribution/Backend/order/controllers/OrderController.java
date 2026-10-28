@@ -1,11 +1,13 @@
 package com.YM.Beverage.Distribution.Backend.order.controllers;
 
 import com.YM.Beverage.Distribution.Backend.configs.security.JwtUtil;
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.order.dtos.*;
 import com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus;
 import com.YM.Beverage.Distribution.Backend.order.enums.PaymentMethod;
 import com.YM.Beverage.Distribution.Backend.order.enums.PaymentStatus;
 import com.YM.Beverage.Distribution.Backend.order.services.OrderService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +32,7 @@ public class OrderController {
     private final OrderService orderService;
     private final HttpServletRequest request;
     private final JwtUtil jwtUtil;
+    private final FilterPermissionGuard filterPermissionGuard;
 
     @PostMapping
     @PreAuthorize("hasAuthority('ORDER_CREATE')")
@@ -59,6 +62,10 @@ public class OrderController {
             @RequestParam(value = "store-search", required = false) String storeSearch,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
+        filterPermissionGuard.requireWhenFiltering(
+                Permission.ORDER_FILTER,
+                storeId, statuses, fromDate, toDate, driverId, paymentMethod, paymentStatus,
+                deliveredFromDate, deliveredToDate, createdByUserId, overdueCredit, storeSearch);
         ApiResponse response = orderService.getOrders(
                 storeId, statuses, fromDate, toDate, driverId, paymentMethod, paymentStatus,
                 deliveredFromDate, deliveredToDate, createdByUserId, overdueCredit, storeSearch,
@@ -111,14 +118,14 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/deliver")
-    @PreAuthorize("hasAuthority('ORDER_DELIVER') and @dataScope.isCompanyUser(authentication)")
+    @PreAuthorize("hasAuthority('ORDER_DELIVER')")
     public ResponseEntity<ApiResponse> deliverOrder(@PathVariable UUID id) {
         ApiResponse response = orderService.deliverOrder(id);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @PatchMapping("/{id}/return")
-    @PreAuthorize("hasAuthority('ORDER_RETURN') and @dataScope.isCompanyUser(authentication)")
+    @PreAuthorize("hasAuthority('ORDER_RETURN')")
     public ResponseEntity<ApiResponse> returnOrder(@PathVariable UUID id,
                                                    @Valid @RequestBody ReturnOrderDTO dto) {
         ApiResponse response = orderService.returnOrder(id, dto.getReason());

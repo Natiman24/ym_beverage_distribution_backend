@@ -1,9 +1,11 @@
 package com.YM.Beverage.Distribution.Backend.product.controllers;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.product.dtos.AdjustQuantityDTO;
 import com.YM.Beverage.Distribution.Backend.product.dtos.CreateProductDTO;
 import com.YM.Beverage.Distribution.Backend.product.dtos.UpdateProductDTO;
 import com.YM.Beverage.Distribution.Backend.product.services.ProductService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -23,6 +25,7 @@ import java.util.UUID;
 public class ProductController {
 
     private final ProductService productService;
+    private final FilterPermissionGuard filterPermissionGuard;
 
     @PostMapping
     @PreAuthorize("hasAuthority('PRODUCT_CREATE') and @dataScope.isCompanyUser(authentication)")
@@ -41,12 +44,14 @@ public class ProductController {
             @RequestParam(value = "active", required = false) Boolean active,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
+        filterPermissionGuard.requireWhenFiltering(
+                Permission.PRODUCT_FILTER, searchQuery, categoryIds, unitIds, brandIds, active);
         ApiResponse response = productService.getProducts(searchQuery, categoryIds, unitIds, brandIds, active, page, pageSize);
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('PRODUCT_VIEW')")
+    @PreAuthorize("hasAuthority('PRODUCT_VIEW_DETAIL') and @dataScope.isCompanyUser(authentication)")
     public ResponseEntity<ApiResponse> getProductById(@PathVariable UUID id) {
         ApiResponse response = productService.getProductById(id);
         return new ResponseEntity<>(response, response.getStatusCode());

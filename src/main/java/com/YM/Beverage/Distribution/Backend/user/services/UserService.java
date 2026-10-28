@@ -8,6 +8,8 @@ import com.YM.Beverage.Distribution.Backend.user.dtos.profile.EditProfileDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UpdateUserRolesPermissionsDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UpdateUserStoreDTO;
 import com.YM.Beverage.Distribution.Backend.user.models.Role;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import com.YM.Beverage.Distribution.Backend.user.models.User;
 import com.YM.Beverage.Distribution.Backend.user.repositories.RoleRepository;
 import com.YM.Beverage.Distribution.Backend.user.repositories.UserRepository;
@@ -73,9 +75,15 @@ public class UserService {
                                 Integer page, Integer pageSize){
         Sort sort = Sort.by("createdAt").descending();
 
-        UUID requesterStoreId = dataScopeService.currentStoreId();
-        if (requesterStoreId != null) {
+        PermissionScope scope = dataScopeService.currentPermissionScope(Permission.USER_VIEW);
+        UUID scopedUserId = null;
+        if (scope == PermissionScope.STORE) {
+            UUID requesterStoreId = dataScopeService.currentStoreId();
+            if (requesterStoreId == null) throw userScopeAccessDenied();
             storeId = requesterStoreId;
+        } else if (scope == PermissionScope.ASSIGNED) {
+            scopedUserId = dataScopeService.currentUserId();
+            storeId = null;
         }
 
         Specification<User> spec = new UserSpecification(
@@ -83,7 +91,8 @@ public class UserService {
                 isActive,
                 isDeactivated,
                 roles,
-                storeId
+                storeId,
+                scopedUserId
         );
 
         if (page == null || pageSize == null) {
@@ -133,7 +142,7 @@ public class UserService {
         User user = userRepository.findById(id).orElseThrow(
                 () -> new DataNotFoundException("User not found")
         );
-        dataScopeService.assertCanAccessUser(user);
+        assertCanAccessUser(Permission.USER_VIEW, user);
         return new ApiResponse("", HttpStatus.OK, Map.of("user", user.toUserResponseDTO()));
     }
 
@@ -158,7 +167,13 @@ public class UserService {
         }
 
         if (dto.getPermissions() != null) {
-            user.setPermissions(dto.getPermissions());
+            Set<Permission> permissions = new HashSet<>(dto.getPermissions());
+            user.setPermissions(permissions);
+            user.setPermissionScopes(normalizeScopes(
+                    permissions, dto.getPermissionScopes(), user.getPermissionScopes()));
+        } else if (dto.getPermissionScopes() != null) {
+            user.setPermissionScopes(normalizeScopes(
+                    user.getPermissions(), dto.getPermissionScopes(), user.getPermissionScopes()));
         }
 
         userRepository.save(user);
@@ -166,12 +181,25 @@ public class UserService {
         return new ApiResponse("User roles and permissions updated successfully", HttpStatus.OK, Map.of("user", user.toUserResponseDTO()));
     }
 
+    private Map<Permission, PermissionScope> normalizeScopes(
+            Set<Permission> permissions,
+            Map<Permission, PermissionScope> requested,
+            Map<Permission, PermissionScope> existing) {
+        Map<Permission, PermissionScope> normalized = new HashMap<>();
+        for (Permission permission : permissions) {
+            PermissionScope scope = requested != null ? requested.get(permission) : null;
+            if (scope == null && existing != null) scope = existing.get(permission);
+            normalized.put(permission, scope != null ? scope : PermissionScope.ALL);
+        }
+        return normalized;
+    }
+
     @Transactional
     public ApiResponse editUser(UUID userId, EditProfileDTO editProfileDTO) {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new DataNotFoundException("User not found")
         );
-        dataScopeService.assertCanAccessUser(user);
+        assertCanAccessUser(Permission.USER_UPDATE, user);
 
         if (editProfileDTO.getFirstName() != null && !editProfileDTO.getFirstName().isBlank()) {
             user.setFirstName(editProfileDTO.getFirstName().trim());
@@ -213,7 +241,7 @@ public class UserService {
     public ApiResponse changeActivationStatus(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("User not found"));
-        dataScopeService.assertCanAccessUser(user);
+        assertCanAccessUser(Permission.USER_TOGGLE_ACTIVE, user);
 
         String message;
         if (user.isDeactivated()) {
@@ -228,6 +256,27 @@ public class UserService {
 
         return new ApiResponse(message, HttpStatus.OK,
                 Map.of("user", user.toUserResponseDTO()));
+    }
+
+    private void assertCanAccessUser(Permission permission, User target) {
+        PermissionScope scope = dataScopeService.currentPermissionScope(permission);
+        if (scope == PermissionScope.ALL) return;
+        if (scope == PermissionScope.STORE) {
+            UUID storeId = dataScopeService.currentStoreId();
+            if (storeId != null && target.getStore() != null
+                    && storeId.equals(target.getStore().getId())) return;
+        } else if (scope == PermissionScope.ASSIGNED
+                && target.getId().equals(dataScopeService.currentUserId())) {
+            return;
+        }
+        throw userScopeAccessDenied();
+    }
+
+    private CustomException userScopeAccessDenied() {
+        return new CustomException(
+                "You are not authorized to access this user within your assigned data scope",
+                HttpStatus.FORBIDDEN,
+                "user_scope_violation");
     }
 
 }

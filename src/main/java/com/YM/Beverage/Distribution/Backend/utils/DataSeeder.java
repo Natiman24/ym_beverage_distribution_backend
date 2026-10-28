@@ -1,6 +1,7 @@
 package com.YM.Beverage.Distribution.Backend.utils;
 
 import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import com.YM.Beverage.Distribution.Backend.user.models.Role;
 import com.YM.Beverage.Distribution.Backend.user.repositories.RoleRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -39,10 +42,17 @@ public class DataSeeder implements ApplicationRunner {
         Set<Permission> missingPermissions = new HashSet<>(allPermissions);
         missingPermissions.removeAll(superAdmin.getPermissions());
 
-        if (!missingPermissions.isEmpty()) {
+        Map<Permission, PermissionScope> scopes = superAdmin.getPermissionScopes() != null
+                ? new HashMap<>(superAdmin.getPermissionScopes()) : new HashMap<>();
+        boolean scopesChanged = allPermissions.stream()
+                .anyMatch(permission -> scopes.get(permission) != PermissionScope.ALL);
+
+        if (!missingPermissions.isEmpty() || scopesChanged) {
             superAdmin.getPermissions().addAll(missingPermissions);
+            allPermissions.forEach(permission -> scopes.put(permission, PermissionScope.ALL));
+            superAdmin.setPermissionScopes(scopes);
             roleRepository.save(superAdmin);
-            log.info("'{}' role updated with {} missing permission(s): {}", SUPER_ADMIN_ROLE, missingPermissions.size(), missingPermissions);
+            log.info("'{}' role synchronized with all permissions at ALL scope", SUPER_ADMIN_ROLE);
         } else {
             log.info("'{}' role already has all permissions. No changes needed.", SUPER_ADMIN_ROLE);
         }

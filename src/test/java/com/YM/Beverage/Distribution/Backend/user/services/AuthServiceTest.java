@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.never;
@@ -55,6 +56,20 @@ class AuthServiceTest {
         ArgumentCaptor<User> user = ArgumentCaptor.forClass(User.class);
         verify(userRepository).saveAndFlush(user.capture());
         assertEquals(storeId, user.getValue().getStore().getId());
+    }
+
+    @Test
+    void registrationCreatesAnActiveUserAndSendsCredentialsWithoutAnActivationOtp() {
+        CreateUserDTO dto = userDto(null);
+        when(userRepository.findByEmailIgnoreCase(dto.getEmail())).thenReturn(Optional.empty());
+
+        service().register(dto);
+
+        ArgumentCaptor<User> user = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).saveAndFlush(user.capture());
+        assertTrue(user.getValue().isActive());
+        verify(otpService).sendAccountCredentials(any(User.class), any());
+        verify(otpService, never()).generateOtp(any(), any(), anyBoolean());
     }
 
     @Test

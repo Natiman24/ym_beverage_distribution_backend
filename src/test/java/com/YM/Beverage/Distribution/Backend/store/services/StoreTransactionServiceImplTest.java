@@ -12,19 +12,26 @@ import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreTransactionRepository;
 import com.YM.Beverage.Distribution.Backend.store.services.Implementations.StoreTransactionServiceImpl;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
+import com.YM.Beverage.Distribution.Backend.utils.exceptions.CustomException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class StoreTransactionServiceImplTest {
@@ -60,5 +67,37 @@ class StoreTransactionServiceImplTest {
                 .createTransaction(store.getId(), dto);
 
         assertEquals(PaymentStatus.PARTIALLY_PAID, order.getPaymentStatus());
+    }
+
+    @Test
+    void assignedDriverOnlyReadsTransactionsForAssignedOrders() {
+        UUID storeId = UUID.randomUUID();
+        UUID driverId = UUID.randomUUID();
+        when(dataScopeService.currentPermissionScope(Permission.TRANSACTION_VIEW))
+                .thenReturn(PermissionScope.ASSIGNED);
+        when(dataScopeService.currentUserId()).thenReturn(driverId);
+        when(orderRepository.existsByStoreIdAndDriverId(storeId, driverId)).thenReturn(true);
+        when(storeRepository.existsById(storeId)).thenReturn(true);
+        when(transactionRepository.findByStoreIdAndOrderDriverIdOrderByCreatedAtDesc(storeId, driverId))
+                .thenReturn(List.of());
+
+        new StoreTransactionServiceImpl(dataScopeService, transactionRepository, storeRepository, orderRepository)
+                .getTransactions(storeId, null, null);
+
+        verify(transactionRepository)
+                .findByStoreIdAndOrderDriverIdOrderByCreatedAtDesc(storeId, driverId);
+        verify(transactionRepository, never()).findByStoreIdOrderByCreatedAtDesc(storeId);
+    }
+
+    @Test
+    void assignedScopeCannotReadWholeStoreBalance() {
+        UUID storeId = UUID.randomUUID();
+        when(dataScopeService.currentPermissionScope(Permission.TRANSACTION_VIEW_BALANCE))
+                .thenReturn(PermissionScope.ASSIGNED);
+
+        StoreTransactionServiceImpl service = new StoreTransactionServiceImpl(
+                dataScopeService, transactionRepository, storeRepository, orderRepository);
+
+        assertThrows(CustomException.class, () -> service.getStoreBalance(storeId));
     }
 }

@@ -18,6 +18,7 @@ public class UserSpecification implements Specification<User> {
     private final Boolean isDeactivated;
     private final List<UUID> roleIds;
     private final UUID storeId;
+    private final UUID userId;
 
     @Override
     public Predicate toPredicate(Root<User> root, CriteriaQuery<?> query, CriteriaBuilder cb) {
@@ -45,6 +46,10 @@ public class UserSpecification implements Specification<User> {
 
         if (storeId != null) {
             predicate = cb.and(predicate, cb.equal(root.get("store").get("id"), storeId));
+        }
+
+        if (userId != null) {
+            predicate = cb.and(predicate, cb.equal(root.get("id"), userId));
         }
 
         return predicate;

@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 
 public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
     List<Order> findByDriverIdOrderByOrderDateDesc(UUID driverId);
+    boolean existsByStoreIdAndDriverId(UUID storeId, UUID driverId);
+    boolean existsByDriverId(UUID driverId);
     long countByStatus(OrderStatus status);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.orderDate >= :from AND o.orderDate < :to AND o.status <> com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus.CANCELLED")

@@ -1,7 +1,9 @@
 package com.YM.Beverage.Distribution.Backend.order.services;
 
 import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
-import com.YM.Beverage.Distribution.Backend.driver.repositories.DriverRepository;
+import com.YM.Beverage.Distribution.Backend.driver.repositories.DriverProfileRepository;
+import com.YM.Beverage.Distribution.Backend.driver.models.DriverProfile;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.order.dtos.CreateOrderDTO;
 import com.YM.Beverage.Distribution.Backend.order.dtos.DispatchOrderDTO;
 import com.YM.Beverage.Distribution.Backend.order.dtos.OrderItemRequestDTO;
@@ -24,6 +26,7 @@ import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreTransactionRepository;
 import com.YM.Beverage.Distribution.Backend.user.models.User;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import com.YM.Beverage.Distribution.Backend.user.repositories.UserRepository;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.CustomException;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,7 +59,7 @@ class OrderServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private StoreRepository storeRepository;
     @Mock private ProductRepository productRepository;
-    @Mock private DriverRepository driverRepository;
+    @Mock private DriverProfileRepository driverProfileRepository;
     @Mock private StoreTransactionRepository storeTransactionRepository;
     @Mock private ProductHistoryRepository productHistoryRepository;
     @Mock private OrderStatusHistoryRepository orderStatusHistoryRepository;
@@ -67,8 +70,9 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(dataScopeService.currentPermissionScope(any())).thenReturn(PermissionScope.ALL);
         orderService = new OrderService(orderRepository, storeRepository, productRepository,
-                driverRepository, storeTransactionRepository, productHistoryRepository,
+                driverProfileRepository, storeTransactionRepository, productHistoryRepository,
                 orderStatusHistoryRepository, userRepository, dataScopeService);
     }
 
@@ -202,6 +206,8 @@ class OrderServiceTest {
         draft.setStore(store);
         draft.setItems(new ArrayList<>(draft.getItems()));
         when(orderRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
+        when(dataScopeService.currentPermissionScope(Permission.ORDER_UPDATE))
+                .thenReturn(PermissionScope.STORE);
         when(dataScopeService.currentStoreId()).thenReturn(store.getId());
         when(dataScopeService.isCurrentUserCompanyUser()).thenReturn(false);
         when(productRepository.findByIdAndActiveTrue(newProduct.getId())).thenReturn(Optional.of(newProduct));
@@ -231,7 +237,6 @@ class OrderServiceTest {
         Order draft = order(OrderStatus.DRAFT, product, 1);
         draft.setCreatedBy(User.builder().id(UUID.randomUUID()).store(draft.getStore()).build());
         when(orderRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
-        when(dataScopeService.currentStoreId()).thenReturn(null);
         when(dataScopeService.currentUserId()).thenReturn(UUID.randomUUID());
 
         assertThrows(CustomException.class, () -> orderService.getOrderById(draft.getId()));
@@ -244,6 +249,8 @@ class OrderServiceTest {
         order.setExpectedDeliveryDate(LocalDateTime.now().plusDays(1));
         order.setPaymentDueDate(LocalDate.now().plusDays(14));
         when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+        when(dataScopeService.currentPermissionScope(Permission.ORDER_VIEW))
+                .thenReturn(PermissionScope.STORE);
         when(dataScopeService.currentStoreId()).thenReturn(order.getStore().getId());
         when(dataScopeService.isCurrentUserCompanyUser()).thenReturn(false);
 
@@ -319,6 +326,43 @@ class OrderServiceTest {
         assertEquals(10, product.getQuantity());
         assertEquals(PaymentStatus.UNPAID, order.getPaymentStatus());
         verify(storeTransactionRepository, never()).save(any());
+    }
+
+    @Test
+    void assignedDriverCanDeliverTheirOrder() {
+        Product product = product("Water 500ml", 6);
+        UUID driverId = UUID.randomUUID();
+        Order order = order(OrderStatus.DISPATCHED, product, 4);
+        order.setDriver(DriverProfile.builder()
+                .id(driverId)
+                .user(User.builder().id(driverId).firstName("Assigned").lastName("Driver").build())
+                .build());
+        when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+        when(dataScopeService.currentPermissionScope(Permission.ORDER_DELIVER))
+                .thenReturn(PermissionScope.ASSIGNED);
+        when(dataScopeService.currentUserId()).thenReturn(driverId);
+
+        orderService.deliverOrder(order.getId());
+
+        assertEquals(OrderStatus.DELIVERED, order.getStatus());
+    }
+
+    @Test
+    void assignedDriverCannotDeliverAnotherDriversOrder() {
+        Product product = product("Water 500ml", 6);
+        Order order = order(OrderStatus.DISPATCHED, product, 4);
+        UUID otherDriverId = UUID.randomUUID();
+        order.setDriver(DriverProfile.builder()
+                .id(otherDriverId)
+                .user(User.builder().id(otherDriverId).firstName("Other").lastName("Driver").build())
+                .build());
+        when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+        when(dataScopeService.currentPermissionScope(Permission.ORDER_DELIVER))
+                .thenReturn(PermissionScope.ASSIGNED);
+        when(dataScopeService.currentUserId()).thenReturn(UUID.randomUUID());
+
+        assertThrows(CustomException.class, () -> orderService.deliverOrder(order.getId()));
+        assertEquals(OrderStatus.DISPATCHED, order.getStatus());
     }
 
     private Product product(String name, int quantity) {

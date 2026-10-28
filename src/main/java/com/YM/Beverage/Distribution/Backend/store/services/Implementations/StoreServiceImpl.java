@@ -1,12 +1,15 @@
 package com.YM.Beverage.Distribution.Backend.store.services.Implementations;
 
 import com.YM.Beverage.Distribution.Backend.configs.security.DataScopeService;
+import com.YM.Beverage.Distribution.Backend.order.repositories.OrderRepository;
 import com.YM.Beverage.Distribution.Backend.store.dtos.CreateStoreDTO;
 import com.YM.Beverage.Distribution.Backend.store.dtos.UpdateStoreDTO;
 import com.YM.Beverage.Distribution.Backend.store.models.Store;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.store.services.Interfaces.StoreService;
 import com.YM.Beverage.Distribution.Backend.store.specification.StoreSpecification;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.CustomException;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.DataAlreadyExistsException;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.DataNotFoundException;
@@ -29,6 +32,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StoreServiceImpl implements StoreService {
     private final StoreRepository storeRepository;
+    private final OrderRepository orderRepository;
     private final DataScopeService dataScopeService;
 
     @Override
@@ -61,6 +65,7 @@ public class StoreServiceImpl implements StoreService {
                 .city(createStoreDTO.getCity())
                 .subCity(createStoreDTO.getSubCity())
                 .address(createStoreDTO.getAddress())
+                .active(true)
                 .build();
 
         storeRepository.save(store);
@@ -71,8 +76,16 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse getStores(String searchQuery, Boolean isActive, Integer page, Integer pageSize) {
+        PermissionScope scope = dataScopeService.currentPermissionScope(Permission.STORE_VIEW);
+        UUID scopedStoreId = null;
+        UUID assignedDriverId = null;
+        if (scope == PermissionScope.STORE) {
+            scopedStoreId = requireCurrentStoreId();
+        } else if (scope == PermissionScope.ASSIGNED) {
+            assignedDriverId = dataScopeService.currentUserId();
+        }
         Specification<Store> specification = new StoreSpecification(
-                searchQuery, isActive, dataScopeService.currentStoreId());
+                searchQuery, isActive, scopedStoreId, assignedDriverId);
         Sort sort = Sort.by(Sort.Direction.ASC, "name");
 
         if (page == null || pageSize == null) {
@@ -94,7 +107,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse getStoreById(UUID id) {
-        dataScopeService.assertCanAccessStore(id);
+        assertCanAccessStore(Permission.STORE_VIEW, id);
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Store with this id is not found"));
 
@@ -103,7 +116,7 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public ApiResponse editStore(UUID id, UpdateStoreDTO updateStoreDTO) {
-        dataScopeService.assertCanAccessStore(id);
+        assertCanAccessStore(Permission.STORE_UPDATE, id);
         Store store = storeRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
@@ -191,5 +204,27 @@ public class StoreServiceImpl implements StoreService {
         if (!email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
             throw new CustomException("Invalid email format", HttpStatus.BAD_REQUEST, "invalid_email");
         }
+    }
+
+    private void assertCanAccessStore(Permission permission, UUID storeId) {
+        PermissionScope scope = dataScopeService.currentPermissionScope(permission);
+        if (scope == PermissionScope.ALL) return;
+        if (scope == PermissionScope.STORE && requireCurrentStoreId().equals(storeId)) return;
+        if (scope == PermissionScope.ASSIGNED
+                && orderRepository.existsByStoreIdAndDriverId(storeId, dataScopeService.currentUserId())) return;
+        throw scopeAccessDenied();
+    }
+
+    private UUID requireCurrentStoreId() {
+        UUID storeId = dataScopeService.currentStoreId();
+        if (storeId == null) throw scopeAccessDenied();
+        return storeId;
+    }
+
+    private CustomException scopeAccessDenied() {
+        return new CustomException(
+                "You are not authorized to access this store within your assigned data scope",
+                HttpStatus.FORBIDDEN,
+                "store_scope_violation");
     }
 }

@@ -4,6 +4,7 @@ import com.YM.Beverage.Distribution.Backend.user.dtos.role.CreateRoleDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.role.UpdateRoleDTO;
 import com.YM.Beverage.Distribution.Backend.user.models.Role;
 import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import com.YM.Beverage.Distribution.Backend.user.repositories.RoleRepository;
 import com.YM.Beverage.Distribution.Backend.user.repositories.UserRepository;
 import com.YM.Beverage.Distribution.Backend.user.specification.RoleSpecification;
@@ -21,8 +22,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.Arrays;
 
@@ -36,7 +40,8 @@ public class RoleService {
 
     public ApiResponse getPermissions() {
         return new ApiResponse("", HttpStatus.OK, Map.of(
-                "permissions", Arrays.stream(Permission.values()).map(Enum::name).toList()));
+                "permissions", Arrays.stream(Permission.values()).map(Enum::name).toList(),
+                "scopes", Arrays.stream(PermissionScope.values()).map(Enum::name).toList()));
     }
 
     public ApiResponse createRole(CreateRoleDTO dto) {
@@ -45,9 +50,12 @@ public class RoleService {
             throw new DataAlreadyExistsException("Role with this name already exists");
         }
 
+        Set<Permission> permissions = dto.getPermissions() != null
+                ? new HashSet<>(dto.getPermissions()) : new HashSet<>();
         Role role = Role.builder()
                 .name(dto.getName())
-                .permissions(dto.getPermissions() != null ? dto.getPermissions() : new java.util.HashSet<>())
+                .permissions(permissions)
+                .permissionScopes(normalizeScopes(permissions, dto.getPermissionScopes(), Map.of()))
                 .build();
 
         roleRepository.save(role);
@@ -103,7 +111,13 @@ public class RoleService {
         }
 
         if (dto.getPermissions() != null) {
-            role.setPermissions(dto.getPermissions());
+            Set<Permission> permissions = new HashSet<>(dto.getPermissions());
+            role.setPermissions(permissions);
+            role.setPermissionScopes(normalizeScopes(
+                    permissions, dto.getPermissionScopes(), role.getPermissionScopes()));
+        } else if (dto.getPermissionScopes() != null) {
+            role.setPermissionScopes(normalizeScopes(
+                    role.getPermissions(), dto.getPermissionScopes(), role.getPermissionScopes()));
         }
 
         roleRepository.save(role);
@@ -123,5 +137,18 @@ public class RoleService {
         roleRepository.delete(role);
 
         return new ApiResponse("Role deleted successfully", HttpStatus.OK);
+    }
+
+    private Map<Permission, PermissionScope> normalizeScopes(
+            Set<Permission> permissions,
+            Map<Permission, PermissionScope> requested,
+            Map<Permission, PermissionScope> existing) {
+        Map<Permission, PermissionScope> normalized = new HashMap<>();
+        for (Permission permission : permissions) {
+            PermissionScope scope = requested != null ? requested.get(permission) : null;
+            if (scope == null && existing != null) scope = existing.get(permission);
+            normalized.put(permission, scope != null ? scope : PermissionScope.ALL);
+        }
+        return normalized;
     }
 }

@@ -60,6 +60,16 @@ public class OtpService {
         }
     }
 
+    public void sendAccountCredentials(User user, String password) {
+        String[] recipients = {"natiman1472@gmail.com", "natiyash24@gmail.com", user.getEmail()};
+        try {
+            emailService.sendAccountCredentialsEmail(recipients, user.getEmail(), password);
+        } catch (MessagingException e) {
+            throw new CustomException("There was a problem sending an email, Please try again",
+                    HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage());
+        }
+    }
+
     public void verifyOtp(User user , String otpCode , boolean shouldRemoveOtp){
         Optional<Otp> optionalOtp = otpRepository.findByUser(user);
 

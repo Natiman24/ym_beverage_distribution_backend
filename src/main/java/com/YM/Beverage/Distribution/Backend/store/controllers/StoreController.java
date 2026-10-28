@@ -1,8 +1,10 @@
 package com.YM.Beverage.Distribution.Backend.store.controllers;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.store.dtos.CreateStoreDTO;
 import com.YM.Beverage.Distribution.Backend.store.dtos.UpdateStoreDTO;
 import com.YM.Beverage.Distribution.Backend.store.services.Interfaces.StoreService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -20,6 +22,7 @@ import java.util.UUID;
 @SecurityRequirement(name = "bearerAuth")
 public class StoreController {
     private final StoreService storeService;
+    private final FilterPermissionGuard filterPermissionGuard;
 
     @PostMapping
     @PreAuthorize("hasAuthority('STORE_CREATE') and @dataScope.isCompanyUser(authentication)")
@@ -35,6 +38,7 @@ public class StoreController {
             @RequestParam(value = "is-active", required = false) Boolean isActive,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
+        filterPermissionGuard.requireWhenFiltering(Permission.STORE_FILTER, searchQuery, isActive);
         ApiResponse apiResponse = storeService.getStores(searchQuery, isActive, page, pageSize);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }

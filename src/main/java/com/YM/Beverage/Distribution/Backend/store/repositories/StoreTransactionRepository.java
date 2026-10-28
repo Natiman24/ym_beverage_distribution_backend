@@ -19,6 +19,12 @@ public interface StoreTransactionRepository extends JpaRepository<StoreTransacti
 
     Page<StoreTransaction> findByStoreIdOrderByCreatedAtDesc(UUID storeId, Pageable pageable);
 
+    List<StoreTransaction> findByStoreIdAndOrderDriverIdOrderByCreatedAtDesc(
+            UUID storeId, UUID driverId);
+
+    Page<StoreTransaction> findByStoreIdAndOrderDriverIdOrderByCreatedAtDesc(
+            UUID storeId, UUID driverId, Pageable pageable);
+
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM StoreTransaction t WHERE t.store.id = :storeId AND t.transactionType = :type")
     BigDecimal sumAmountByStoreIdAndType(@Param("storeId") UUID storeId, @Param("type") TransactionType type);
 

@@ -1,8 +1,10 @@
 package com.YM.Beverage.Distribution.Backend.user.controllers;
 
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.user.dtos.role.CreateRoleDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.role.UpdateRoleDTO;
 import com.YM.Beverage.Distribution.Backend.user.services.RoleService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -21,6 +23,7 @@ import java.util.UUID;
 @PreAuthorize("hasAuthority('ROLE_MANAGE') and @dataScope.isCompanyUser(authentication)")
 public class RoleController {
     private final RoleService roleService;
+    private final FilterPermissionGuard filterPermissionGuard;
 
     @GetMapping("/permissions")
     public ResponseEntity<ApiResponse> getPermissions() {
@@ -39,6 +42,7 @@ public class RoleController {
             @RequestParam(value = "search-query", required = false) String searchQuery,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
+        filterPermissionGuard.requireWhenFiltering(Permission.ROLE_FILTER, searchQuery);
         ApiResponse response = roleService.getRoles(searchQuery, page, pageSize);
         return new ResponseEntity<>(response, response.getStatusCode());
     }

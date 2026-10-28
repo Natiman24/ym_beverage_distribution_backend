@@ -38,6 +38,22 @@ public class EmailService {
         emailSender.send(message);
     }
 
+    public void sendAccountCredentialsEmail(String[] to, String email, String password) throws MessagingException {
+        MimeMessage message = emailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+        helper.setFrom(fromEmail);
+        helper.setTo(to);
+        helper.setSubject("Your new account credentials");
+
+        Context context = new Context();
+        context.setVariable("email", email);
+        context.setVariable("password", password);
+
+        helper.setText(templateEngine.process("AccountCredentialsTemplate", context), true);
+        emailSender.send(message);
+    }
+
     public void sendForgotPasswordEmail(String[] to, String name, int otp) throws MessagingException {
         MimeMessage message = emailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true);

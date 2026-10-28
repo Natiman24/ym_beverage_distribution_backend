@@ -1,9 +1,11 @@
 package com.YM.Beverage.Distribution.Backend.user.dtos.profile;
 
 import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import lombok.*;
 
 import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter
@@ -14,4 +16,5 @@ import java.util.UUID;
 public class UpdateUserRolesPermissionsDTO {
     private Set<UUID> roleIds;
     private Set<Permission> permissions;
+    private Map<Permission, PermissionScope> permissionScopes;
 }

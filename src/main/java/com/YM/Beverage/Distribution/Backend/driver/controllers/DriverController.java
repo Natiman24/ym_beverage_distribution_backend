@@ -1,10 +1,12 @@
 package com.YM.Beverage.Distribution.Backend.driver.controllers;
 
 import com.YM.Beverage.Distribution.Backend.configs.security.JwtUtil;
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.driver.dtos.CreateDriverDTO;
 import com.YM.Beverage.Distribution.Backend.driver.dtos.UpdateDriverDTO;
 import com.YM.Beverage.Distribution.Backend.driver.services.DriverService;
 import com.YM.Beverage.Distribution.Backend.order.services.OrderService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,9 +29,10 @@ public class DriverController {
     private final OrderService orderService;
     private final JwtUtil jwtUtil;
     private final HttpServletRequest httpServletRequest;
+    private final FilterPermissionGuard filterPermissionGuard;
 
     @GetMapping("/me")
-    @PreAuthorize("hasAuthority('DRIVER_VIEW_PROFILE') and @dataScope.isCompanyUser(authentication)")
+    @PreAuthorize("hasAuthority('DRIVER_VIEW_PROFILE')")
     public ResponseEntity<ApiResponse> getMyProfile() {
         ApiResponse response = driverService.getMyProfile(jwtUtil.getUserId(jwtUtil.resolveToken(httpServletRequest)));
         return new ResponseEntity<>(response, response.getStatusCode());
@@ -50,7 +53,15 @@ public class DriverController {
             @RequestParam(value = "is-deactivated", required = false) Boolean isDeactivated,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
+        filterPermissionGuard.requireWhenFiltering(Permission.DRIVER_FILTER, searchQuery, active, isDeactivated);
         ApiResponse response = driverService.getDrivers(searchQuery, active, isDeactivated, page, pageSize);
+        return new ResponseEntity<>(response, response.getStatusCode());
+    }
+
+    @GetMapping("/candidates")
+    @PreAuthorize("hasAuthority('DRIVER_CREATE') and @dataScope.isCompanyUser(authentication)")
+    public ResponseEntity<ApiResponse> getDriverCandidates() {
+        ApiResponse response = driverService.getDriverCandidates();
         return new ResponseEntity<>(response, response.getStatusCode());
     }
 
@@ -84,7 +95,7 @@ public class DriverController {
     }
 
     @GetMapping("/{id}/orders")
-    @PreAuthorize("hasAuthority('DRIVER_VIEW_ORDERS') and @dataScope.isCompanyUser(authentication)")
+    @PreAuthorize("hasAuthority('DRIVER_VIEW_ORDERS')")
     public ResponseEntity<ApiResponse> getDriverOrders(@PathVariable UUID id) {
         ApiResponse response = orderService.getDriverOrders(id);
         return new ResponseEntity<>(response, response.getStatusCode());

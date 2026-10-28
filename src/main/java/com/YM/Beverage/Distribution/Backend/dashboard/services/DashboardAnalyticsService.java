@@ -1,7 +1,7 @@
 package com.YM.Beverage.Distribution.Backend.dashboard.services;
 
 import com.YM.Beverage.Distribution.Backend.dashboard.dtos.DashboardAnalyticsDTO;
-import com.YM.Beverage.Distribution.Backend.driver.repositories.DriverRepository;
+import com.YM.Beverage.Distribution.Backend.driver.repositories.DriverProfileRepository;
 import com.YM.Beverage.Distribution.Backend.order.repositories.OrderItemRepository;
 import com.YM.Beverage.Distribution.Backend.order.repositories.OrderRepository;
 import com.YM.Beverage.Distribution.Backend.product.repositories.ProductRepository;
@@ -24,7 +24,7 @@ public class DashboardAnalyticsService {
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
     private final StoreRepository storeRepository;
-    private final DriverRepository driverRepository;
+    private final DriverProfileRepository driverProfileRepository;
 
     public ApiResponse getAnalytics(int days) {
         int safeDays = Math.max(7, Math.min(days, 365));
@@ -68,7 +68,7 @@ public class DashboardAnalyticsService {
                         .grossProfitMarginPercent(percent(grossProfit, revenue))
                         .averageOrderValue(delivered == 0 ? BigDecimal.ZERO : revenue.divide(BigDecimal.valueOf(delivered), 2, RoundingMode.HALF_UP))
                         .averageDeliveryHours(Math.round(averageDeliveryHours * 10.0) / 10.0)
-                        .activeStores(storeRepository.countByActiveTrue()).availableDrivers(driverRepository.countAvailableDrivers()).build())
+                        .activeStores(storeRepository.countByActiveTrue()).availableDrivers(driverProfileRepository.countAvailableDrivers()).build())
                 .inventory(DashboardAnalyticsDTO.Inventory.builder()
                         .activeProducts(activeProducts).healthyProducts(productRepository.countHealthyProducts())
                         .lowStockProducts(productRepository.countLowStockProducts())

@@ -12,6 +12,8 @@ import com.YM.Beverage.Distribution.Backend.store.models.StoreTransaction;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreRepository;
 import com.YM.Beverage.Distribution.Backend.store.repositories.StoreTransactionRepository;
 import com.YM.Beverage.Distribution.Backend.store.services.Interfaces.StoreTransactionService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.CustomException;
 import com.YM.Beverage.Distribution.Backend.utils.exceptions.DataNotFoundException;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
@@ -90,19 +92,26 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
 
     @Override
     public ApiResponse getTransactions(UUID storeId, Integer page, Integer pageSize) {
-        dataScopeService.assertCanAccessStore(storeId);
+        PermissionScope scope = dataScopeService.currentPermissionScope(Permission.TRANSACTION_VIEW);
+        assertStoreScope(scope, storeId);
         if (!storeRepository.existsById(storeId)) {
             throw new DataNotFoundException("Store not found");
         }
 
         if (page == null || pageSize == null) {
-            List<StoreTransaction> transactions = transactionRepository.findByStoreIdOrderByCreatedAtDesc(storeId);
+            List<StoreTransaction> transactions = scope == PermissionScope.ASSIGNED
+                    ? transactionRepository.findByStoreIdAndOrderDriverIdOrderByCreatedAtDesc(
+                            storeId, dataScopeService.currentUserId())
+                    : transactionRepository.findByStoreIdOrderByCreatedAtDesc(storeId);
             return new ApiResponse("", HttpStatus.OK,
                     Map.of("transactions", transactions.stream().map(StoreTransaction::toResponseDTO).toList()));
         }
 
         Pageable pageable = PageRequest.of(page - 1, pageSize);
-        Page<StoreTransaction> pageResult = transactionRepository.findByStoreIdOrderByCreatedAtDesc(storeId, pageable);
+        Page<StoreTransaction> pageResult = scope == PermissionScope.ASSIGNED
+                ? transactionRepository.findByStoreIdAndOrderDriverIdOrderByCreatedAtDesc(
+                        storeId, dataScopeService.currentUserId(), pageable)
+                : transactionRepository.findByStoreIdOrderByCreatedAtDesc(storeId, pageable);
 
         return new ApiResponse("", HttpStatus.OK, Map.of(
                 "transactions", pageResult.getContent().stream().map(StoreTransaction::toResponseDTO).toList(),
@@ -114,7 +123,9 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
 
     @Override
     public ApiResponse getStoreBalance(UUID storeId) {
-        dataScopeService.assertCanAccessStore(storeId);
+        PermissionScope scope = dataScopeService.currentPermissionScope(Permission.TRANSACTION_VIEW_BALANCE);
+        if (scope == PermissionScope.ASSIGNED) throw scopeAccessDenied();
+        assertStoreScope(scope, storeId);
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new DataNotFoundException("Store not found"));
 
@@ -136,7 +147,6 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
 
     @Override
     public ApiResponse getOrderBalance(UUID storeId, UUID orderId) {
-        dataScopeService.assertCanAccessStore(storeId);
         if (!storeRepository.existsById(storeId)) {
             throw new DataNotFoundException("Store not found");
         }
@@ -147,6 +157,8 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
         if (!order.getStore().getId().equals(storeId)) {
             throw new CustomException("Order does not belong to this store", HttpStatus.BAD_REQUEST, "");
         }
+        PermissionScope scope = dataScopeService.currentPermissionScope(Permission.TRANSACTION_VIEW_BALANCE);
+        assertOrderScope(scope, order);
 
         BigDecimal orderTotal = order.getTotalAmount();
         BigDecimal totalPaid = transactionRepository.sumAmountByOrderIdAndTypes(orderId, PAYMENT_TYPES);
@@ -263,5 +275,38 @@ public class StoreTransactionServiceImpl implements StoreTransactionService {
             }
         }
         orderRepository.save(order);
+    }
+
+    private void assertStoreScope(PermissionScope scope, UUID storeId) {
+        if (scope == PermissionScope.ALL) return;
+        if (scope == PermissionScope.STORE) {
+            UUID currentStoreId = dataScopeService.currentStoreId();
+            if (currentStoreId != null && currentStoreId.equals(storeId)) return;
+        } else if (scope == PermissionScope.ASSIGNED
+                && orderRepository.existsByStoreIdAndDriverId(
+                        storeId, dataScopeService.currentUserId())) {
+            return;
+        }
+        throw scopeAccessDenied();
+    }
+
+    private void assertOrderScope(PermissionScope scope, Order order) {
+        if (scope == PermissionScope.ALL) return;
+        if (scope == PermissionScope.STORE) {
+            UUID currentStoreId = dataScopeService.currentStoreId();
+            if (currentStoreId != null && currentStoreId.equals(order.getStore().getId())) return;
+        } else if (scope == PermissionScope.ASSIGNED
+                && order.getDriver() != null
+                && order.getDriver().getId().equals(dataScopeService.currentUserId())) {
+            return;
+        }
+        throw scopeAccessDenied();
+    }
+
+    private CustomException scopeAccessDenied() {
+        return new CustomException(
+                "You are not authorized to access transactions within this data scope",
+                HttpStatus.FORBIDDEN,
+                "transaction_scope_violation");
     }
 }

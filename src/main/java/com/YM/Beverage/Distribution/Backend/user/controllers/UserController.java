@@ -1,11 +1,13 @@
 package com.YM.Beverage.Distribution.Backend.user.controllers;
 
 import com.YM.Beverage.Distribution.Backend.configs.security.JwtUtil;
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.user.dtos.auth.ChangePasswordDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.EditProfileDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UpdateUserRolesPermissionsDTO;
 import com.YM.Beverage.Distribution.Backend.user.dtos.profile.UpdateUserStoreDTO;
 import com.YM.Beverage.Distribution.Backend.user.services.UserService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +29,7 @@ public class UserController {
     private final UserService userService;
     private final JwtUtil jwtUtil;
     private final HttpServletRequest httpServletRequest;
+    private final FilterPermissionGuard filterPermissionGuard;
 
 
     @GetMapping("/me")
@@ -106,6 +109,8 @@ public class UserController {
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize
     ) {
+        filterPermissionGuard.requireWhenFiltering(
+                Permission.USER_FILTER, searchQuery, isActive, isDeactivated, roles, storeId);
         ApiResponse response = userService.getUsers(
                 searchQuery, isActive, isDeactivated, roles, storeId, page, pageSize);
         return new ResponseEntity<>(response, response.getStatusCode());

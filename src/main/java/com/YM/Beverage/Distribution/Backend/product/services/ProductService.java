@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,11 +111,12 @@ public class ProductService {
         saveHistory(product, HistoryMode.CREATION, initialQuantity, supplier, "Product created");
 
         return new ApiResponse("Product created successfully", HttpStatus.CREATED,
-                Map.of("product", product.toSingleResponseDTO()));
+                Map.of("product", product.toSingleResponseDTO(hasAuthority("PRODUCT_VIEW_QUANTITY"))));
     }
 
     public ApiResponse getProducts(String searchQuery, List<UUID> categoryIds, List<UUID> unitIds,
                                    List<UUID> brandIds, Boolean active, Integer page, Integer pageSize) {
+        boolean includeQuantity = hasAuthority("PRODUCT_VIEW_QUANTITY");
         Boolean effectiveActive = isSuperAdmin() ? active : Boolean.TRUE;
         ProductSpecification spec = new ProductSpecification(
                 searchQuery, categoryIds, unitIds, brandIds, effectiveActive);
@@ -123,14 +125,16 @@ public class ProductService {
         if (page == null || pageSize == null) {
             List<Product> products = productRepository.findAll(spec, sort);
             return new ApiResponse("", HttpStatus.OK,
-                    Map.of("products", products.stream().map(Product::toListResponseDTO).toList()));
+                    Map.of("products", products.stream()
+                            .map(product -> product.toListResponseDTO(includeQuantity)).toList()));
         }
 
         Pageable pageable = PageRequest.of(page - 1, pageSize, sort);
         Page<Product> pageResult = productRepository.findAll(spec, pageable);
 
         return new ApiResponse("", HttpStatus.OK, Map.of(
-                "products", pageResult.getContent().stream().map(Product::toListResponseDTO).toList(),
+                "products", pageResult.getContent().stream()
+                        .map(product -> product.toListResponseDTO(includeQuantity)).toList(),
                 "pageSize", pageSize,
                 "currentPage", page,
                 "totalPages", pageResult.getTotalPages(),
@@ -139,7 +143,8 @@ public class ProductService {
 
     public ApiResponse getProductById(UUID id) {
         Product product = findVisibleProduct(id);
-        return new ApiResponse("", HttpStatus.OK, Map.of("product", product.toSingleResponseDTO()));
+        return new ApiResponse("", HttpStatus.OK,
+                Map.of("product", product.toSingleResponseDTO(hasAuthority("PRODUCT_VIEW_QUANTITY"))));
     }
 
     @Transactional
@@ -174,7 +179,7 @@ public class ProductService {
         productRepository.save(product);
         saveHistory(product, HistoryMode.UPDATE, 0, null, "Product updated");
         return new ApiResponse("Product updated successfully", HttpStatus.OK,
-                Map.of("product", product.toSingleResponseDTO()));
+                Map.of("product", product.toSingleResponseDTO(hasAuthority("PRODUCT_VIEW_QUANTITY"))));
     }
 
     @Transactional
@@ -195,7 +200,7 @@ public class ProductService {
         productRepository.save(product);
         saveHistory(product, HistoryMode.DELETION, 0, null, "Product deactivated");
         return new ApiResponse("Product has existing usage and was deactivated", HttpStatus.OK,
-                Map.of("product", product.toSingleResponseDTO()));
+                Map.of("product", product.toSingleResponseDTO(hasAuthority("PRODUCT_VIEW_QUANTITY"))));
     }
 
     @Transactional
@@ -223,7 +228,7 @@ public class ProductService {
         saveHistory(product, mode, dto.getAmount(), supplier, dto.getNote());
 
         return new ApiResponse("Product quantity adjusted successfully", HttpStatus.OK,
-                Map.of("product", product.toSingleResponseDTO()));
+                Map.of("product", product.toSingleResponseDTO(hasAuthority("PRODUCT_VIEW_QUANTITY"))));
     }
 
     public ApiResponse getProductHistory(UUID id, Integer page, Integer pageSize) {
@@ -271,5 +276,12 @@ public class ProductService {
                 .map(user -> user.getRoles().stream()
                         .anyMatch(role -> SUPER_ADMIN_ROLE.equalsIgnoreCase(role.getName())))
                 .orElse(false);
+    }
+
+    private boolean hasAuthority(String authority) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication != null && authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(authority::equals);
     }
 }

@@ -5,6 +5,7 @@ public enum Permission {
     // ─── Orders ───────────────────────────────────────────────────────────────
     ORDER_CREATE,
     ORDER_VIEW,             // DRIVER
+    ORDER_FILTER,
     ORDER_UPDATE,
     ORDER_DELETE,
     ORDER_CONFIRM,
@@ -19,6 +20,7 @@ public enum Permission {
     // ─── Drivers ──────────────────────────────────────────────────────────────
     DRIVER_CREATE,
     DRIVER_VIEW,
+    DRIVER_FILTER,
     DRIVER_UPDATE,
     DRIVER_DELETE,
     DRIVER_TOGGLE_ACTIVE,
@@ -28,6 +30,7 @@ public enum Permission {
     // ─── Stores (Customers) ───────────────────────────────────────────────────
     STORE_CREATE,
     STORE_VIEW,             // DRIVER
+    STORE_FILTER,
     STORE_UPDATE,
     STORE_DELETE,
     STORE_TOGGLE_ACTIVE,
@@ -40,6 +43,9 @@ public enum Permission {
     // ─── Products ─────────────────────────────────────────────────────────────
     PRODUCT_CREATE,
     PRODUCT_VIEW,           // DRIVER
+    PRODUCT_VIEW_DETAIL,
+    PRODUCT_VIEW_QUANTITY,
+    PRODUCT_FILTER,
     PRODUCT_UPDATE,
     PRODUCT_DELETE,
 
@@ -50,12 +56,14 @@ public enum Permission {
     // ─── Suppliers ────────────────────────────────────────────────────────────
     SUPPLIER_CREATE,
     SUPPLIER_VIEW,
+    SUPPLIER_FILTER,
     SUPPLIER_UPDATE,
     SUPPLIER_DELETE,
 
     // ─── Product Lookups (Brands, Categories, Units, Volume Units) ────────────
     LOOKUP_CREATE,
     LOOKUP_VIEW,
+    LOOKUP_FILTER,
     LOOKUP_UPDATE,
     LOOKUP_DELETE,
 
@@ -65,6 +73,7 @@ public enum Permission {
     // ─── Users ────────────────────────────────────────────────────────────────
     USER_CREATE,
     USER_VIEW,
+    USER_FILTER,
     USER_UPDATE,
     USER_DELETE,
     USER_TOGGLE_ACTIVE,
@@ -73,6 +82,7 @@ public enum Permission {
 
     // ─── Roles & Permissions ──────────────────────────────────────────────────
     ROLE_MANAGE,
+    ROLE_FILTER,
 
     // ─── Reports ──────────────────────────────────────────────────────────────
     REPORT_VIEW

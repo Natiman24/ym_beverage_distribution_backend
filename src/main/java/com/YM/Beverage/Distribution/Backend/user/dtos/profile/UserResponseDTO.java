@@ -3,9 +3,11 @@ package com.YM.Beverage.Distribution.Backend.user.dtos.profile;
 
 import com.YM.Beverage.Distribution.Backend.user.dtos.role.RoleResponseDTO;
 import com.YM.Beverage.Distribution.Backend.user.models.Permission;
+import com.YM.Beverage.Distribution.Backend.user.models.PermissionScope;
 import lombok.*;
 
 import java.util.Set;
+import java.util.Map;
 import java.util.UUID;
 import java.time.LocalDateTime;
 
@@ -24,6 +26,7 @@ public class UserResponseDTO {
     private boolean isDeactivated;
     private Set<RoleResponseDTO> roles;
     private Set<Permission> permissions;
+    private Map<Permission, PermissionScope> permissionScopes;
     private UUID storeId;
     private String storeName;
     private LocalDateTime createdAt;

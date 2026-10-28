@@ -9,6 +9,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -41,6 +42,7 @@ public class Store extends BaseEntity {
 
     private String address;
 
+    @Builder.Default
     private boolean active = true;
 
     public SingleStoreResponseDTO toSingleResponseDTO() {

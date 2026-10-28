@@ -8,12 +8,15 @@ import com.YM.Beverage.Distribution.Backend.utils.global_classes.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -25,7 +28,6 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @Entity
 @Table(name = "users")
-@Inheritance(strategy = InheritanceType.JOINED)
 public class User extends BaseEntity {
     @Column(name = "first_name" , nullable = false)
     private String firstName;
@@ -43,7 +45,8 @@ public class User extends BaseEntity {
     private String password;
 
     @Column(name = "is_active", nullable = false)
-    private boolean isActive;
+    @Builder.Default
+    private boolean isActive = true;
 
     @Column(name = "is_deactivated", nullable = false)
     private boolean isDeactivated;
@@ -54,6 +57,7 @@ public class User extends BaseEntity {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
+    @Builder.Default
     private Set<Role> roles = new HashSet<>();
 
     @ElementCollection(fetch = FetchType.EAGER)
@@ -63,7 +67,20 @@ public class User extends BaseEntity {
     )
     @Enumerated(EnumType.STRING)
     @Column(name = "permission")
+    @Builder.Default
     private Set<Permission> permissions = new HashSet<>();
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "user_permission_scopes",
+            joinColumns = @JoinColumn(name = "user_id")
+    )
+    @MapKeyColumn(name = "permission")
+    @MapKeyEnumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "scope", nullable = false)
+    @Builder.Default
+    private Map<Permission, PermissionScope> permissionScopes = new HashMap<>();
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "store_id")
@@ -81,6 +98,7 @@ public class User extends BaseEntity {
                 .isDeactivated(isDeactivated)
                 .roles(roles != null ? getRoles().stream().map(Role::toResponseDTO).collect(Collectors.toSet()) : null)
                 .permissions(getPermissions())
+                .permissionScopes(getPermissionScopes())
                 .storeId(store != null ? store.getId() : null)
                 .storeName(store != null ? store.getName() : null)
                 .createdAt(getCreatedAt())

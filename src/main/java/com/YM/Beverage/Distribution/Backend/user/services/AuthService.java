@@ -87,22 +87,23 @@ public class AuthService {
                 .phoneNumber(createUserDTO.getPhoneNumber())
                 .email(normalizedEmail)
                 .password(BCrypt.hashpw(password, BCrypt.gensalt()))
+                .isActive(true)
                 .isDeactivated(false)
                 .store(store)
                 .roles(new HashSet<>(roles))
                 .build();
 
         try {
-            // Flush before sending the OTP so uniqueness failures are returned by this request,
+            // Flush before sending credentials so uniqueness failures are returned by this request,
             // rather than appearing after the email operation has started.
             userRepository.saveAndFlush(user);
         } catch (DataIntegrityViolationException ex) {
             throw new DataAlreadyExistsException("User with this email already exists");
         }
 
-        otpService.generateOtp(user, password, false);
+        otpService.sendAccountCredentials(user, password);
 
-        return new ApiResponse("User registered successfully", HttpStatus.CREATED,
+        return new ApiResponse("User created successfully", HttpStatus.CREATED,
                 Map.of("user", user.toUserResponseDTO()));
     }
 
@@ -154,7 +155,7 @@ public class AuthService {
             return new ApiResponse("Logged in successfully",HttpStatus.OK,details);
         }
         catch (BadCredentialsException e) {
-            return new ApiResponse("Invalid phone or password",HttpStatus.BAD_REQUEST);
+            return new ApiResponse("Invalid email or password",HttpStatus.BAD_REQUEST);
         }
     }
 

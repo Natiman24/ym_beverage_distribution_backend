@@ -1,6 +1,6 @@
 package com.YM.Beverage.Distribution.Backend.order.models;
 
-import com.YM.Beverage.Distribution.Backend.driver.models.Driver;
+import com.YM.Beverage.Distribution.Backend.driver.models.DriverProfile;
 import com.YM.Beverage.Distribution.Backend.order.dtos.OrderListResponseDTO;
 import com.YM.Beverage.Distribution.Backend.order.dtos.OrderSingleResponseDTO;
 import com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus;
@@ -63,7 +63,7 @@ public class Order extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id")
-    private Driver driver;
+    private DriverProfile driver;
 
     @OneToMany(
             mappedBy = "order",
@@ -121,7 +121,9 @@ public class Order extends BaseEntity {
                 .expectedDeliveryDate(includeCompanyDetails ? expectedDeliveryDate : null)
                 .deliveredAt(deliveredAt)
                 .totalAmount(totalAmount)
-                .driverName(driver != null ? driver.getFirstName() + " " + driver.getLastName() : null)
+                .driverName(driver != null
+                        ? driver.getUser().getFirstName() + " " + driver.getUser().getLastName()
+                        : null)
                 .itemCount(items != null ? items.size() : 0)
                 .version(version)
                 .build();

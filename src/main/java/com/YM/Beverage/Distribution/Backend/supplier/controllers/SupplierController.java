@@ -1,9 +1,11 @@
 package com.YM.Beverage.Distribution.Backend.supplier.controllers;
 
 import com.YM.Beverage.Distribution.Backend.configs.security.JwtUtil;
+import com.YM.Beverage.Distribution.Backend.configs.security.FilterPermissionGuard;
 import com.YM.Beverage.Distribution.Backend.supplier.dtos.CreateSupplierDTO;
 import com.YM.Beverage.Distribution.Backend.supplier.dtos.UpdateSupplierDTO;
 import com.YM.Beverage.Distribution.Backend.supplier.services.Interfaces.SupplierService;
+import com.YM.Beverage.Distribution.Backend.user.models.Permission;
 import com.YM.Beverage.Distribution.Backend.utils.global_classes.ApiResponse;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +26,7 @@ public class SupplierController {
     private final SupplierService supplierService;
     private final JwtUtil jwtUtil;
     private final HttpServletRequest httpServletRequest;
+    private final FilterPermissionGuard filterPermissionGuard;
 
     @PostMapping()
     @PreAuthorize("hasAuthority('SUPPLIER_CREATE') and @dataScope.isCompanyUser(authentication)")
@@ -39,6 +42,7 @@ public class SupplierController {
             @RequestParam(value = "active", required = false) Boolean active,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page-size", required = false) Integer pageSize) {
+        filterPermissionGuard.requireWhenFiltering(Permission.SUPPLIER_FILTER, searchQuery, active);
         ApiResponse apiResponse = supplierService.getSuppliers(page, pageSize, searchQuery, active);
         return new ResponseEntity<>(apiResponse, apiResponse.getStatusCode());
     }

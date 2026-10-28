@@ -79,6 +79,10 @@ public class Product extends BaseEntity {
     private Long version;
 
     public ProductSingleResponseDTO toSingleResponseDTO() {
+        return toSingleResponseDTO(true);
+    }
+
+    public ProductSingleResponseDTO toSingleResponseDTO(boolean includeQuantity) {
         return ProductSingleResponseDTO.builder()
                 .id(getId())
                 .name(name)
@@ -89,7 +93,7 @@ public class Product extends BaseEntity {
                 .volume(volume)
                 .volumeUnit(volumeUnit != null ? volumeUnit.toResponseDTO() : null)
                 .unitsPerPack(unitsPerPack)
-                .quantity(quantity)
+                .quantity(includeQuantity ? quantity : null)
                 .thresholdQuantity(thresholdQuantity)
                 .sellingPrice(sellingPrice)
                 .purchasePrice(purchasePrice)
@@ -101,6 +105,10 @@ public class Product extends BaseEntity {
     }
 
     public ProductListResponseDTO toListResponseDTO() {
+        return toListResponseDTO(true);
+    }
+
+    public ProductListResponseDTO toListResponseDTO(boolean includeQuantity) {
         return ProductListResponseDTO.builder()
                 .id(getId())
                 .name(name)
@@ -109,7 +117,7 @@ public class Product extends BaseEntity {
                 .unit(unit != null ? unit.getName() : null)
                 .volume(volume)
                 .volumeUnit(volumeUnit != null ? volumeUnit.getName() : null)
-                .quantity(quantity)
+                .quantity(includeQuantity ? quantity : null)
                 .thresholdQuantity(thresholdQuantity)
                 .sellingPrice(sellingPrice)
                 .active(active)

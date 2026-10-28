@@ -22,6 +22,8 @@ public interface UserRepository extends JpaRepository<User, UUID> , JpaSpecifica
 
     Optional<User> findByEmailIgnoreCase(String email);
 
+    Optional<User> findByPhoneNumber(String phoneNumber);
+
     List<User> findByEmailIn(List<String> emails);
 
     void deleteByEmail(String email);
