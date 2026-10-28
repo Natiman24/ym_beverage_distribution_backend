@@ -306,14 +306,12 @@ public class OrderService {
 
         LocalDateTime expectedDeliveryDate = dto.getExpectedDeliveryDate() != null
                 ? dto.getExpectedDeliveryDate() : order.getExpectedDeliveryDate();
-        if (expectedDeliveryDate == null) {
-            throw new CustomException("Expected delivery date is required when dispatching an order",
-                    HttpStatus.BAD_REQUEST, "");
+        if (expectedDeliveryDate != null) {
+            validateExpectedDeliveryDate(expectedDeliveryDate);
         }
         LocalDate paymentDueDate = dto.getPaymentDueDate() != null
                 ? dto.getPaymentDueDate() : order.getPaymentDueDate();
-        validateExpectedDeliveryDate(expectedDeliveryDate);
-        validatePaymentDueDate(order.getPaymentMethod(), paymentDueDate, true);
+        validatePaymentDueDate(order.getPaymentMethod(), paymentDueDate, false);
         order.setExpectedDeliveryDate(expectedDeliveryDate);
         order.setPaymentDueDate(order.getPaymentMethod() == PaymentMethod.CREDIT
                 ? paymentDueDate : null);

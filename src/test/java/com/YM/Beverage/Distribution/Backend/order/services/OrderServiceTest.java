@@ -98,6 +98,20 @@ class OrderServiceTest {
     }
 
     @Test
+    void dispatchAllowsSchedulingDatesToBeOmitted() {
+        Product product = product("Water 500ml", 10);
+        Order order = order(OrderStatus.PROCESSING, product, 4);
+        when(orderRepository.findByIdForUpdate(order.getId())).thenReturn(Optional.of(order));
+        when(productRepository.findAllActiveByIdForUpdate(any())).thenReturn(List.of(product));
+
+        orderService.dispatchOrder(order.getId(), new DispatchOrderDTO());
+
+        assertEquals(OrderStatus.DISPATCHED, order.getStatus());
+        assertNull(order.getExpectedDeliveryDate());
+        assertNull(order.getPaymentDueDate());
+    }
+
+    @Test
     void createOrderUsesOverridesAndVerifiesSubmittedTotal() {
         Store store = Store.builder().id(UUID.randomUUID()).name("Test Store").active(true).build();
         Product defaultPrice = product("Water 500ml", 10);
