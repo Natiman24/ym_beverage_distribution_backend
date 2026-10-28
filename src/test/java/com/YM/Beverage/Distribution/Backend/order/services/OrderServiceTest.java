@@ -260,6 +260,7 @@ class OrderServiceTest {
     void storeOrderResponsesHideCompanySchedulingFields() {
         Product product = product("Water 500ml", 10);
         Order order = order(OrderStatus.SUBMITTED, product, 1);
+        order.getStore().setActive(false);
         order.setExpectedDeliveryDate(LocalDateTime.now().plusDays(1));
         order.setPaymentDueDate(LocalDate.now().plusDays(14));
         when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
@@ -273,6 +274,7 @@ class OrderServiceTest {
 
         assertNull(response.getExpectedDeliveryDate());
         assertNull(response.getPaymentDueDate());
+        assertEquals(false, response.isStoreActive());
     }
 
     @Test

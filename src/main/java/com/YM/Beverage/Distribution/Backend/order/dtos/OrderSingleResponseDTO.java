@@ -23,6 +23,7 @@ public class OrderSingleResponseDTO {
     private UUID id;
     private UUID storeId;
     private String storeName;
+    private boolean storeActive;
     private OrderStatus status;
     private PaymentMethod paymentMethod;
     private PaymentStatus paymentStatus;

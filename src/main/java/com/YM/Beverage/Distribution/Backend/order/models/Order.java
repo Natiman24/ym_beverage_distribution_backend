@@ -86,6 +86,7 @@ public class Order extends BaseEntity {
                 .id(getId())
                 .storeId(store != null ? store.getId() : null)
                 .storeName(store != null ? store.getName() : null)
+                .storeActive(store != null && store.isActive())
                 .status(status)
                 .paymentMethod(paymentMethod)
                 .paymentStatus(paymentStatus)
