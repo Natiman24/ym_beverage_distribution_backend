@@ -383,7 +383,11 @@ public class OrderService {
     public ApiResponse returnOrder(UUID id, String reason) {
         Order order = orderRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new DataNotFoundException("Order not found"));
-        assertCanAccess(order, Permission.ORDER_RETURN);
+
+        Permission returnPermission = order.getStatus() == OrderStatus.DELIVERED
+                ? Permission.ORDER_RETURN_AFTER_DELIVERED
+                : Permission.ORDER_RETURN;
+        assertCanAccess(order, returnPermission);
 
         if (order.getStatus() != OrderStatus.DELIVERED && order.getStatus() != OrderStatus.DISPATCHED) {
             throw new CustomException("Only Dispatched and Delivered orders can be returned", HttpStatus.BAD_REQUEST, "");

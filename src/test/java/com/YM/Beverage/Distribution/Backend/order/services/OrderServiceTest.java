@@ -316,6 +316,7 @@ class OrderServiceTest {
 
         orderService.returnOrder(order.getId(), "Damaged bottles");
 
+        verify(dataScopeService).currentPermissionScope(Permission.ORDER_RETURN_AFTER_DELIVERED);
         assertEquals(10, product.getQuantity());
         assertEquals(OrderStatus.RETURNED, order.getStatus());
         assertEquals(PaymentStatus.REFUNDED, order.getPaymentStatus());
@@ -339,6 +340,7 @@ class OrderServiceTest {
 
         orderService.returnOrder(order.getId(), "Customer unavailable");
 
+        verify(dataScopeService).currentPermissionScope(Permission.ORDER_RETURN);
         assertEquals(10, product.getQuantity());
         assertEquals(PaymentStatus.UNPAID, order.getPaymentStatus());
         verify(storeTransactionRepository, never()).save(any());

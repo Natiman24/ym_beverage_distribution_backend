@@ -125,7 +125,7 @@ public class OrderController {
     }
 
     @PatchMapping("/{id}/return")
-    @PreAuthorize("hasAuthority('ORDER_RETURN')")
+    @PreAuthorize("hasAuthority('ORDER_RETURN') or hasAuthority('ORDER_RETURN_AFTER_DELIVERED')")
     public ResponseEntity<ApiResponse> returnOrder(@PathVariable UUID id,
                                                    @Valid @RequestBody ReturnOrderDTO dto) {
         ApiResponse response = orderService.returnOrder(id, dto.getReason());
