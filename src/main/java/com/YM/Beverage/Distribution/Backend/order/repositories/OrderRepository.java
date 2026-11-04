@@ -17,12 +17,12 @@ import java.time.LocalDateTime;
 import java.math.BigDecimal;
 
 public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecificationExecutor<Order> {
-    List<Order> findByDriverIdOrderByOrderDateDesc(UUID driverId);
+    List<Order> findByDriverIdOrderByListDateDesc(UUID driverId);
     boolean existsByStoreIdAndDriverId(UUID storeId, UUID driverId);
     boolean existsByDriverId(UUID driverId);
     long countByStatus(OrderStatus status);
 
-    @Query("SELECT COUNT(o) FROM Order o WHERE o.orderDate >= :from AND o.orderDate < :to AND o.status <> com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus.CANCELLED")
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.orderedDate >= :from AND o.orderedDate < :to AND o.status <> com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus.CANCELLED")
     long countReportableOrders(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.deliveredAt >= :from AND o.deliveredAt < :to AND o.status = com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus.DELIVERED")
@@ -31,16 +31,16 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.deliveredAt >= :from AND o.deliveredAt < :to AND o.status = com.YM.Beverage.Distribution.Backend.order.enums.OrderStatus.DELIVERED")
     BigDecimal sumDeliveredRevenue(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    @Query(value = "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (delivered_at - order_date)) / 3600.0), 0) FROM orders WHERE delivered_at >= :fromDate AND delivered_at < :toDate AND status = 'DELIVERED'", nativeQuery = true)
+    @Query(value = "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (delivered_at - ordered_date)) / 3600.0), 0) FROM orders WHERE delivered_at >= :fromDate AND delivered_at < :toDate AND status = 'DELIVERED'", nativeQuery = true)
     Number averageDeliveryHours(@Param("fromDate") LocalDateTime from, @Param("toDate") LocalDateTime to);
 
     @Query(value = "SELECT CAST(delivered_at AS DATE), COUNT(*), COALESCE(SUM(total_amount), 0) FROM orders WHERE delivered_at >= :fromDate AND delivered_at < :toDate AND status = 'DELIVERED' GROUP BY CAST(delivered_at AS DATE) ORDER BY CAST(delivered_at AS DATE)", nativeQuery = true)
     List<Object[]> dailyDeliveredSales(@Param("fromDate") LocalDateTime from, @Param("toDate") LocalDateTime to);
 
-    @Query(value = "SELECT status, COUNT(*) FROM orders WHERE order_date >= :fromDate AND order_date < :toDate GROUP BY status", nativeQuery = true)
+    @Query(value = "SELECT status, COUNT(*) FROM orders WHERE ordered_date >= :fromDate AND ordered_date < :toDate GROUP BY status", nativeQuery = true)
     List<Object[]> statusBreakdown(@Param("fromDate") LocalDateTime from, @Param("toDate") LocalDateTime to);
 
-    @Query(value = "SELECT payment_status, COUNT(*) FROM orders WHERE order_date >= :fromDate AND order_date < :toDate GROUP BY payment_status", nativeQuery = true)
+    @Query(value = "SELECT payment_status, COUNT(*) FROM orders WHERE ordered_date >= :fromDate AND ordered_date < :toDate GROUP BY payment_status", nativeQuery = true)
     List<Object[]> paymentBreakdown(@Param("fromDate") LocalDateTime from, @Param("toDate") LocalDateTime to);
 
     @Query(value = "SELECT s.id, s.name, COUNT(o.id), COALESCE(SUM(o.total_amount), 0) FROM orders o JOIN stores s ON s.id = o.store_id WHERE o.delivered_at >= :fromDate AND o.delivered_at < :toDate AND o.status = 'DELIVERED' GROUP BY s.id, s.name ORDER BY SUM(o.total_amount) DESC LIMIT 5", nativeQuery = true)

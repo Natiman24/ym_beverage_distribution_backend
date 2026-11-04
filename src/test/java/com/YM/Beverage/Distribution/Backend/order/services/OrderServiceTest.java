@@ -46,8 +46,10 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -140,6 +142,8 @@ class OrderServiceTest {
         assertEquals(BigDecimal.valueOf(7), savedOrder.getValue().getItems().get(1).getUnitPrice());
         assertEquals(PaymentStatus.UNPAID, savedOrder.getValue().getPaymentStatus());
         assertEquals(OrderStatus.SUBMITTED, savedOrder.getValue().getStatus());
+        assertNotNull(savedOrder.getValue().getOrderedDate());
+        assertEquals(savedOrder.getValue().getOrderDate(), savedOrder.getValue().getOrderedDate());
     }
 
     @Test
@@ -209,6 +213,27 @@ class OrderServiceTest {
         ArgumentCaptor<Order> savedOrder = ArgumentCaptor.forClass(Order.class);
         verify(orderRepository).save(savedOrder.capture());
         assertEquals(OrderStatus.DRAFT, savedOrder.getValue().getStatus());
+        assertNull(savedOrder.getValue().getOrderedDate());
+    }
+
+    @Test
+    void submittingDraftSetsOrderedDateToSubmissionTime() {
+        Product product = product("Water 500ml", 10);
+        Order draft = order(OrderStatus.DRAFT, product, 1);
+        LocalDateTime draftedAt = LocalDateTime.now().minusDays(10);
+        draft.setOrderDate(draftedAt);
+        draft.setOrderedDate(null);
+        when(orderRepository.findById(draft.getId())).thenReturn(Optional.of(draft));
+        when(dataScopeService.isCurrentUserCompanyUser()).thenReturn(false);
+        when(dataScopeService.currentPermissionScope(Permission.ORDER_CREATE))
+                .thenReturn(PermissionScope.STORE);
+        when(dataScopeService.currentStoreId()).thenReturn(draft.getStore().getId());
+
+        orderService.confirmOrder(draft.getId());
+
+        assertEquals(OrderStatus.SUBMITTED, draft.getStatus());
+        assertNotNull(draft.getOrderedDate());
+        assertTrue(draft.getOrderedDate().isAfter(draftedAt));
     }
 
     @Test

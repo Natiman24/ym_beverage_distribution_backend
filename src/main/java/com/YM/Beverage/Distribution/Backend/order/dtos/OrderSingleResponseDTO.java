@@ -29,6 +29,7 @@ public class OrderSingleResponseDTO {
     private PaymentStatus paymentStatus;
     private LocalDate paymentDueDate;
     private LocalDateTime orderDate;
+    private LocalDateTime orderedDate;
     private LocalDateTime expectedDeliveryDate;
     private LocalDateTime deliveredAt;
     private BigDecimal totalAmount;

@@ -56,11 +56,11 @@ public class OrderSpecification implements Specification<Order> {
         }
 
         if (fromDate != null) {
-            predicate = cb.and(predicate, cb.greaterThanOrEqualTo(root.get("orderDate"), fromDate));
+            predicate = cb.and(predicate, cb.greaterThanOrEqualTo(root.get("orderedDate"), fromDate));
         }
 
         if (toDate != null) {
-            predicate = cb.and(predicate, cb.lessThanOrEqualTo(root.get("orderDate"), toDate));
+            predicate = cb.and(predicate, cb.lessThanOrEqualTo(root.get("orderedDate"), toDate));
         }
 
         if (driverId != null) {

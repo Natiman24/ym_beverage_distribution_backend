@@ -11,6 +11,7 @@ import com.YM.Beverage.Distribution.Backend.utils.global_classes.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.Formula;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -37,6 +38,12 @@ public class Order extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime orderDate;
+
+    @Column(name = "ordered_date")
+    private LocalDateTime orderedDate;
+
+    @Formula("COALESCE(ordered_date, order_date)")
+    private LocalDateTime listDate;
 
     private LocalDateTime expectedDeliveryDate;
 
@@ -92,6 +99,7 @@ public class Order extends BaseEntity {
                 .paymentStatus(paymentStatus)
                 .paymentDueDate(includeCompanyDetails ? paymentDueDate : null)
                 .orderDate(orderDate)
+                .orderedDate(orderedDate)
                 .expectedDeliveryDate(includeCompanyDetails ? expectedDeliveryDate : null)
                 .deliveredAt(deliveredAt)
                 .totalAmount(totalAmount)
@@ -119,6 +127,7 @@ public class Order extends BaseEntity {
                 .paymentStatus(paymentStatus)
                 .paymentDueDate(includeCompanyDetails ? paymentDueDate : null)
                 .orderDate(orderDate)
+                .orderedDate(orderedDate)
                 .expectedDeliveryDate(includeCompanyDetails ? expectedDeliveryDate : null)
                 .deliveredAt(deliveredAt)
                 .totalAmount(totalAmount)

@@ -80,6 +80,7 @@ public class OrderService {
         boolean companyUser = requester.getStore() == null;
         validateCreateScheduling(dto, companyUser);
         OrderStatus initialStatus = dto.isDraft() ? OrderStatus.DRAFT : OrderStatus.SUBMITTED;
+        LocalDateTime now = LocalDateTime.now();
 
         Order order = Order.builder()
                 .store(store)
@@ -88,7 +89,8 @@ public class OrderService {
                 .paymentStatus(PaymentStatus.UNPAID)
                 .paymentDueDate(companyUser && dto.getPaymentMethod() == PaymentMethod.CREDIT
                         ? dto.getPaymentDueDate() : null)
-                .orderDate(LocalDateTime.now())
+                .orderDate(now)
+                .orderedDate(initialStatus == OrderStatus.SUBMITTED ? now : null)
                 .expectedDeliveryDate(companyUser ? dto.getExpectedDeliveryDate() : null)
                 .deliveryAddress(dto.getDeliveryAddress() != null && !dto.getDeliveryAddress().isBlank()
                         ? dto.getDeliveryAddress() : defaultDeliveryAddress(store))
@@ -144,7 +146,7 @@ public class OrderService {
                 storeId, statuses, fromDate, toDate, driverId, paymentMethod, paymentStatus,
                 deliveredFromDate, deliveredToDate, createdByUserId, overdueCredit, storeSearch,
                 visibleCompanyDraftCreatorId);
-        Sort sort = Sort.by(Sort.Direction.DESC, "orderDate");
+        Sort sort = Sort.by(Sort.Direction.DESC, "listDate");
 
         if (page == null || pageSize == null) {
             List<Order> orders = orderRepository.findAll(spec, sort);
@@ -243,6 +245,7 @@ public class OrderService {
             throw new CustomException("Only DRAFT orders can be submitted", HttpStatus.BAD_REQUEST, "");
         }
 
+        order.setOrderedDate(LocalDateTime.now());
         changeStatus(order, OrderStatus.SUBMITTED, null);
         orderRepository.save(order);
         return new ApiResponse("Order submitted successfully", HttpStatus.OK,
@@ -470,7 +473,7 @@ public class OrderService {
         if (!driverProfileRepository.existsById(driverId)) {
             throw new DataNotFoundException("Driver not found");
         }
-        List<Order> orders = orderRepository.findByDriverIdOrderByOrderDateDesc(driverId);
+        List<Order> orders = orderRepository.findByDriverIdOrderByListDateDesc(driverId);
         UUID requesterStoreId = dataScopeService.currentStoreId();
         if (scope == PermissionScope.STORE) {
             if (requesterStoreId == null) throw scopeAccessDenied();
