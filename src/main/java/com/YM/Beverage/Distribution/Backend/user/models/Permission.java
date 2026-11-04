@@ -5,6 +5,7 @@ public enum Permission {
     // ─── Orders ───────────────────────────────────────────────────────────────
     ORDER_CREATE,
     ORDER_VIEW,             // DRIVER
+    ORDER_VIEW_OVERDUE_DELIVERY_WARNING,
     ORDER_FILTER,
     ORDER_UPDATE,
     ORDER_ADJUST_PRICE,
